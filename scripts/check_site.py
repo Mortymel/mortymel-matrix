@@ -8,19 +8,22 @@ from urllib.parse import unquote, urlsplit
 
 site = Path(__file__).resolve().parents[1] / "dist"
 meta = json.loads((site / "build.json").read_text(encoding="utf-8"))
-for capacity, artifacts in meta["profiles"].items():
-    manifest = json.loads((site / f"manifest-{capacity}mb.json").read_text(encoding="utf-8"))
+for key, artifacts in meta["profiles"].items():
+    manifest = json.loads((site / f"manifest-{key}.json").read_text(encoding="utf-8"))
     assert manifest["version"] == meta["version"]
-    assert manifest["builds"][0]["chipFamily"] == "ESP32-S3"
+    assert manifest["builds"][0]["chipFamily"] == artifacts["chipFamily"]
     part = manifest["builds"][0]["parts"][0]
     assert part["offset"] == 0 and part["path"] == artifacts["usb"]["path"]
-    for item in artifacts.values():
+    for item in (artifacts["usb"], artifacts["ota"]):
         data = (site / item["path"]).read_bytes()
-        assert data[:1] == b"\xe9"
+        assert data[0 if item is artifacts["ota"] else artifacts["bootOffset"]] == 0xe9
         assert len(data) == item["bytes"]
         assert hashlib.sha256(data).hexdigest() == item["sha256"]
     assert (site / part["path"]).read_bytes()[0x10000] == 0xe9
-assert json.loads((site / "manifest.json").read_text(encoding="utf-8")) == json.loads((site / "manifest-8mb.json").read_text(encoding="utf-8"))
+assert json.loads((site / "manifest.json").read_text(encoding="utf-8")) == json.loads((site / "manifest-s3-8.json").read_text(encoding="utf-8"))
+
+
+assert (site / "profile.mjs").is_file()
 
 
 class Links(HTMLParser):

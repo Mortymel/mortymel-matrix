@@ -2,16 +2,16 @@
 
 ## Antes de empezar
 
-El instalador publica perfiles para **ESP32-S3 con flash QD de 4, 8 o 16 MB**. Elige la capacidad real de tu módulo; no emplees estos binarios en placas OPI u otra familia de ESP32. Los GPIO expuestos dependen de la placa, no del tamaño de flash. Se necesita un cable USB de datos, Chrome o Edge de escritorio y una conexión a la página por HTTPS. El ESP32 usa Wi-Fi de 2,4 GHz. Para Home Assistant hace falta un broker MQTT accesible desde esa red.
+El instalador **detecta el chip y el tamaño de flash**. Publica ESP32-S3 con flash QD de 4/8/16 MB y ESP32 clásico y S2 con flash de al menos 4 MB (usan la distribución de 4 MB incluso si tienen más capacidad). No pide seleccionar placa. Los C3/C6 y otros chips sin soporte HUB75 DMA se rechazan. Las variantes S3 con flash OPI no están verificadas: la detección del tamaño por sí sola no permite distinguir con certeza el modo físico de la flash. Los GPIO expuestos dependen de la placa concreta. Se necesita un cable USB de datos, Chrome o Edge de escritorio y una conexión a la página por HTTPS. El ESP32 usa Wi-Fi de 2,4 GHz. Para Home Assistant hace falta un broker MQTT accesible desde esa red.
 
 Una matriz HUB75 64 × 64 necesita fuente externa de 5 V adecuada y tierra común con el ESP32. Consulta la [guía física HUB75](CABLEADO.md) para conectar las 14 señales, identificar IN, elegir GPIO y preparar la alimentación. Este proyecto inicia con la salida de matriz desactivada (`E = -1`). Puedes cambiar **todo el mapa** desde la web antes de cablear el panel.
 
 ## Primera instalación USB
 
 1. Entra al [instalador Mortymel Matrix](https://mortymel.github.io/mortymel-matrix/) desde Chrome o Edge de escritorio.
-2. Conecta el puerto USB serie disponible en tu placa S3, pulsa **Conectar e instalar** y elige el puerto que corresponda. Si existe otro programa que usa ese puerto, ciérralo.
-3. El instalador puede ofrecer borrar la memoria: esto elimina ajustes, contraseñas y GIF anteriores. Continúa solo si quieres una instalación nueva. Espera a que termine el flasheo.
-4. Abre **Logs & Console** en el instalador a 115200 baudios y pulsa RESET. Se imprimen el AP y su clave, además del usuario `admin` y su contraseña web inicial. Si no aparecen, prueba el otro puerto USB o abre el monitor de PlatformIO. Las claves se vuelven a imprimir al reiniciar.
+2. Conecta el puerto USB serie disponible en tu placa S3, pulsa **Detectar e instalar** y elige el puerto que corresponda. Si existe otro programa que usa ese puerto, ciérralo.
+3. La página identifica chip y flash, descarga el binario y comprueba su SHA-256 antes de pedir confirmación. **La instalación nueva borra toda la flash**: firmware previo, ajustes, contraseñas y GIF. Continúa solo si ya tienes copia de lo que necesitas. Espera a que termine el flasheo.
+4. Abre **Registro serie** en el instalador a 115200 baudios y pulsa RESET. Se imprimen el AP y su clave, además del usuario `admin` y su contraseña web inicial. Si no aparecen, prueba el otro puerto USB o abre el monitor de PlatformIO. Las claves se vuelven a imprimir al reiniciar.
 5. Conéctate al AP `Mortymel-XXXXXX` y visita `http://192.168.4.1/`. Inicia sesión, configura Wi-Fi en **Red y MQTT** y cambia la contraseña web en **Sistema**.
 6. Cuando el ESP32 se conecta a Wi-Fi, cierra el AP. La dirección IP local se imprime por serie. Si luego falla la red, el AP se reactiva para recuperación.
 
@@ -29,11 +29,11 @@ Configura y comprueba las 14 señales en **Sistema** siguiendo [Conexión físic
 
 ## Actualizar sin borrar configuración
 
-En la [página del instalador](https://mortymel.github.io/mortymel-matrix/#descargas) descarga **firmware OTA (aplicación solamente)**. En la web local del ESP32 abre **Sistema → Actualización por Wi-Fi**, selecciona ese `.bin` y espera al reinicio. La imagen **USB completa** se escribe desde offset 0 y **no sirve para OTA**. Usa siempre el archivo OTA **de la misma capacidad y distribución de particiones** con la que instalaste el firmware; al cambiar de perfil reinstala por USB y respalda previamente ajustes y GIF. Las preferencias y los GIF se conservan en una actualización OTA normal.
+Después de detectar la placa, en la [página del instalador](https://mortymel.github.io/mortymel-matrix/#descargas) descarga **firmware OTA (aplicación solamente)**. En la web local del ESP32 abre **Sistema → Actualización por Wi-Fi**, selecciona ese `.bin` y espera al reinicio. La imagen **USB completa** se escribe desde offset 0 y **no sirve para OTA**. Usa siempre el archivo OTA **de la misma capacidad y distribución de particiones** con la que instalaste el firmware; al cambiar de perfil reinstala por USB y respalda previamente ajustes y GIF. Las preferencias y los GIF se conservan en una actualización OTA normal.
 
 ## Compilar manualmente
 
-Abre el proyecto con PlatformIO y revisa `platformio.ini`. Para las capacidades QD disponibles ejecuta `python scripts/embed_web.py` y `pio run -e s3-4mb`, `pio run -e esp32-s3` o `pio run -e s3-16mb`. Para otra memoria o familia modifica y verifica placa, flash y particiones antes de compilar. Los GPIO se ajustan desde la consola local. Para subir manualmente un perfil, con la placa conectada usa `pio run -e NOMBRE_DEL_PERFIL -t upload` (por ejemplo `esp32-s3` para 8 MB). Abre `pio device monitor -b 115200` en el puerto correcto. El archivo de aplicación queda en `.pio/build/esp32-s3/firmware.bin`.
+Abre el proyecto con PlatformIO y revisa `platformio.ini`. Genera la web con `python scripts/embed_web.py` y compila el entorno que corresponda: `s3-4mb`, `esp32-s3`, `s3-16mb`, `esp32-classic` o `esp32-s2`. Para otra memoria o familia modifica y verifica placa, flash y particiones antes de compilar. Los GPIO se ajustan desde la consola local. Para subir manualmente un perfil, con la placa conectada usa `pio run -e NOMBRE_DEL_PERFIL -t upload` (por ejemplo `esp32-s3` para 8 MB). Abre `pio device monitor -b 115200` en el puerto correcto. El archivo de aplicación queda en `.pio/build/esp32-s3/firmware.bin`.
 
 ## Recuperación
 

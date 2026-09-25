@@ -14,9 +14,13 @@ import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_SLOTS = {"4": 0x1A0000, "8": 0x330000, "16": 0x640000}
-PROFILES = {"4": ("s3-4mb", "mortymel-matrix-s3-4mb"),
-            "8": ("esp32-s3", "mortymel-matrix-s3-n8"),
-            "16": ("s3-16mb", "mortymel-matrix-s3-16mb")}
+PROFILES = {
+    "s3-4": ("s3-4mb", "mortymel-matrix-s3-4mb", "ESP32-S3", 4, "esp32s3", 0),
+    "s3-8": ("esp32-s3", "mortymel-matrix-s3-n8", "ESP32-S3", 8, "esp32s3", 0),
+    "s3-16": ("s3-16mb", "mortymel-matrix-s3-16mb", "ESP32-S3", 16, "esp32s3", 0),
+    "esp32-4": ("esp32-classic", "mortymel-matrix-esp32-4mb", "ESP32", 4, "esp32", 0x1000),
+    "s2-4": ("esp32-s2", "mortymel-matrix-s2-4mb", "ESP32-S2", 4, "esp32s2", 0x1000),
+}
 SITE = ROOT / "dist"
 VERSION = (ROOT / "VERSION").read_text().strip()
 GUIDES = {
@@ -58,7 +62,7 @@ def main():
     firmware = SITE / "firmware"
     firmware.mkdir(parents=True, exist_ok=True)
     artifacts = {}
-    for capacity, (environment, stem) in PROFILES.items():
+    for key, (environment, stem, family, capacity, esptool_chip, boot_offset) in PROFILES.items():
         build = ROOT / ".pio/build" / environment
         inputs = [build / "bootloader.bin", build / "partitions.bin",
                   framework / "tools/partitions/boot_app0.bin", build / "firmware.bin"]
@@ -67,23 +71,23 @@ def main():
             raise SystemExit("Archivos de compilación ausentes: " + ", ".join(missing))
         if any(path.read_bytes()[:1] != b"\xe9" for path in (inputs[0], inputs[3])):
             raise SystemExit(f"Bootloader o aplicación inválidos: {environment}")
-        if inputs[3].stat().st_size > APP_SLOTS[capacity]:
+        if inputs[3].stat().st_size > APP_SLOTS[str(capacity)]:
             raise SystemExit(f"La aplicación supera la partición OTA de {capacity} MB")
         usb = firmware / f"{stem}.bin"
         ota = firmware / f"{stem}-ota.bin"
         subprocess.run([
-            sys.executable, "-m", "esptool", "--chip", "esp32s3", "merge_bin",
+            sys.executable, "-m", "esptool", "--chip", esptool_chip, "merge_bin",
             "-o", str(usb), "--flash_mode", "dio", "--flash_freq", "40m",
-            "--flash_size", f"{capacity}MB", "0x0", str(inputs[0]),
+            "--flash_size", f"{capacity}MB", hex(boot_offset), str(inputs[0]),
             "0x8000", str(inputs[1]), "0xe000", str(inputs[2]),
             "0x10000", str(inputs[3]),
         ], check=True)
-        if usb.stat().st_size > int(capacity) * 1024 * 1024 or usb.read_bytes()[0] != 0xe9:
+        if usb.stat().st_size > capacity * 1024 * 1024 or usb.read_bytes()[boot_offset] != 0xe9:
             raise SystemExit(f"La imagen USB no cabe en {capacity} MB o no tiene cabecera")
         shutil.copyfile(inputs[3], ota)
-        artifacts[capacity] = {"usb": {"path": f"firmware/{usb.name}", **digest(usb)},
+        artifacts[key] = {"chipFamily": family, "flashMB": capacity, "bootOffset": boot_offset, "usb": {"path": f"firmware/{usb.name}", **digest(usb)},
                                "ota": {"path": f"firmware/{ota.name}", **digest(ota)}}
-    for name in ("index.html", "styles.css", "site.js"):
+    for name in ("index.html", "styles.css", "site.js", "profile.mjs"):
         shutil.copyfile(ROOT / "flasher" / name, SITE / name)
     (SITE / "docs").mkdir(exist_ok=True)
     cards = "".join(
@@ -97,21 +101,23 @@ def main():
         body = re.sub(r'href="([A-Z]+)\.md"', r'href="\1.html"', body)
         (SITE / "docs" / f"{key}.html").write_text(render_doc(key, body), encoding="utf-8")
 
-    for capacity in PROFILES:
+    for key, (_, _, family, capacity, _, _) in PROFILES.items():
         manifest = {
-            "name": f"Mortymel Matrix · ESP32-S3 QD {capacity} MB", "version": VERSION,
+            "name": f"Mortymel Matrix · {family} {capacity} MB", "version": VERSION,
             "new_install_prompt_erase": True, "new_install_improv_wait_time": 0,
-            "builds": [{"chipFamily": "ESP32-S3", "improv": False,
-                        "parts": [{"path": artifacts[capacity]["usb"]["path"], "offset": 0}]}],
+            "builds": [{"chipFamily": family, "improv": False,
+                        "parts": [{"path": artifacts[key]["usb"]["path"], "offset": 0}]}],
         }
         output = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
-        (SITE / f"manifest-{capacity}mb.json").write_text(output, encoding="utf-8")
-        if capacity == "8":
+        (SITE / f"manifest-{key}.json").write_text(output, encoding="utf-8")
+        if family == "ESP32-S3":
+            (SITE / f"manifest-{capacity}mb.json").write_text(output, encoding="utf-8")
+        if key == "s3-8":
             (SITE / "manifest.json").write_text(output, encoding="utf-8")  # old links
     info = {"version": VERSION, "commit": os.environ.get("GITHUB_SHA", "local")[:12],
             "profiles": artifacts}
     (SITE / "build.json").write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
-    print(f"Sitio listo: {SITE} · {VERSION} · perfiles QD: {', '.join(PROFILES)} MB")
+    print(f"Sitio listo: {SITE} · {VERSION} · perfiles: {', '.join(PROFILES)}")
 
 
 if __name__ == "__main__":

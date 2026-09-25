@@ -10,7 +10,7 @@
 
 ## Siguiente etapa: compatibilidad
 
-- Perfiles versionados para placas ESP32, S2 y S3 concretas. Una matriz 64×64
+- Verificar en hardware los perfiles ESP32, S2 y S3 y ampliar la compatibilidad con flash OPI. Una matriz 64×64
   1/32 scan exige la línea E; la compatibilidad de controladores varía.
 - Tabla de particiones por flash y variante de PSRAM; aviso en la web de
   espacio libre y límites de carga. Pruebas reales de Wi-Fi con HUB75 DMA.
