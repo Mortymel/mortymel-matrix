@@ -17,6 +17,7 @@ inspira en el estilo de los relojes de píxeles de Clockwise. Este repositorio
 
 ## Primera versión
 
+- Compilación automática de firmware en GitHub Actions para cambios nuevos.
 - Un único firmware inicial, servidor web local en el ESP32 y asistente de Wi-Fi.
 - Reloj digital, texto editable, reproducción de GIF 64×64 desde LittleFS.
 - Subida, listado y borrado de GIF por HTTP; ajustes persistentes en Preferences.
