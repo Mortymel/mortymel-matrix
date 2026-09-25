@@ -38,14 +38,38 @@ static HUB75_I2S_CFG::i2s_pins panelPins = {
 static const char *pinNames[] = {"r1", "g1", "b1", "r2", "g2", "b2", "a", "b", "c", "d", "e", "lat", "oe", "clk"};
 static_assert(sizeof(panelPins) == sizeof(int8_t) * 14, "Unexpected HUB75 pin structure");
 
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+static const char *chipFamily = "ESP32-S3";
+#elif defined(CONFIG_IDF_TARGET_ESP32S2)
+static const char *chipFamily = "ESP32-S2";
+#elif defined(CONFIG_IDF_TARGET_ESP32)
+static const char *chipFamily = "ESP32";
+#else
+#error "This HUB75 DMA firmware supports ESP32, ESP32-S2 and ESP32-S3 only"
+#endif
+
+static void secondaryLog(const String &line) {
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+  Serial0.print(line);
+#endif
+}
+
 static bool validPanelPins(const HUB75_I2S_CFG::i2s_pins &pins) {
   const int8_t *values = reinterpret_cast<const int8_t *>(&pins);
   for (int i = 0; i < 14; ++i) {
     int pin = values[i];
     if (i == 10 && pin == -1) continue; // E=-1 disables the panel.
-    // Avoid flash/PSRAM pins, native USB, UART0 console and boot-critical GPIO.
+    // Exclude inaccessible, flash and USB pins per chip family. The user's
+    // specific carrier board may reserve more pins; check before connecting.
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
     if (pin < 1 || pin > 48 || (pin >= 22 && pin <= 37) ||
         pin == 19 || pin == 20 || pin == 43 || pin == 44 || pin == 45 || pin == 46) return false;
+#elif defined(CONFIG_IDF_TARGET_ESP32S2)
+    if (pin < 1 || pin > 45 || (pin >= 22 && pin <= 32) || pin == 19 || pin == 20) return false;
+#else
+    if (pin < 1 || pin > 33 || (pin >= 6 && pin <= 11) ||
+        pin == 20 || pin == 24 || (pin >= 28 && pin <= 31)) return false;
+#endif
     for (int j = 0; j < i; ++j) if (values[j] == pin) return false;
   }
   return true;
@@ -253,7 +277,8 @@ static void registerRoutes() {
   web.on("/api/status", HTTP_GET, [] {
     if (!authed()) return;
     JsonDocument d;
-    d["device"] = deviceId; d["wifi"] = WiFi.status() == WL_CONNECTED;
+    d["device"] = deviceId; d["chip_family"] = chipFamily;
+    d["flash_bytes"] = ESP.getFlashChipSize(); d["wifi"] = WiFi.status() == WL_CONNECTED;
     d["mqtt"] = mqtt.connected(); d["matrix"] = matrix != nullptr;
     d["mode"] = mode; d["message"] = message; d["gif"] = selectedGif;
     d["brightness"] = brightness; d["ssid"] = ssid; d["timezone"] = timezone;
@@ -283,7 +308,7 @@ static void registerRoutes() {
       if (pin < -1 || pin > 48) { errorReply(400, "GPIO E inválido"); return; }
       next.e = pin;
     } else { errorReply(400, "Perfil HUB75 inválido"); return; }
-    if (!validPanelPins(next)) { errorReply(400, "GPIO reservado, repetido o no disponible en ESP32-S3"); return; }
+    if (!validPanelPins(next)) { errorReply(400, "GPIO reservado, repetido o no disponible en este ESP32"); return; }
     panelPins = next;
     prefs.putBytes("pins", &panelPins, sizeof(panelPins));
     prefs.putChar("e_pin", panelPins.e);
@@ -426,7 +451,9 @@ static void registerRoutes() {
 
 void setup() {
   Serial.begin(115200);
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
   Serial0.begin(115200);
+#endif
   prefs.begin("matrix", false);
   const bool freshInstall = !prefs.isKey("admin") && !prefs.isKey("ap_pass");
   uint64_t id = ESP.getEfuseMac();
@@ -459,7 +486,7 @@ void setup() {
   // Only a new device with no prior credentials may format an empty FS.
   // Upgrades from older releases have credentials and preserve their GIFs.
   bool fsReady = LittleFS.begin(freshInstall);
-  if (!fsReady) { Serial.println("ERROR LittleFS: no se borraron los GIF"); Serial0.println("ERROR LittleFS: no se borraron los GIF"); }
+  if (!fsReady) { Serial.println("ERROR LittleFS: no se borraron los GIF"); secondaryLog("ERROR LittleFS: no se borraron los GIF\n"); }
   WiFi.mode(WIFI_AP_STA);
   if (ssid.length()) {
     WiFi.begin(ssid.c_str(), wifiPassword.c_str());
@@ -468,13 +495,13 @@ void setup() {
   if (WiFi.status() != WL_CONNECTED) {
     apActive = WiFi.softAP(("Mortymel-" + String(suffix)).c_str(), apPassword.c_str());
     Serial.printf("AP: Mortymel-%s  clave: %s  web: http://192.168.4.1/\n", suffix, apPassword.c_str());
-    Serial0.printf("AP: Mortymel-%s  clave: %s  web: http://192.168.4.1/\n", suffix, apPassword.c_str());
+    secondaryLog("AP: Mortymel-" + String(suffix) + "  clave: " + apPassword + "  web: http://192.168.4.1/\n");
   } else {
     Serial.printf("Web: http://%s/\n", WiFi.localIP().toString().c_str());
-    Serial0.printf("Web: http://%s/\n", WiFi.localIP().toString().c_str());
+    secondaryLog("Web: http://" + WiFi.localIP().toString() + "/\n");
   }
   Serial.printf("Usuario web: admin  clave inicial/actual: %s\n", adminPassword.c_str());
-  Serial0.printf("Usuario web: admin  clave inicial/actual: %s\n", adminPassword.c_str());
+  secondaryLog("Usuario web: admin  clave inicial/actual: " + adminPassword + "\n");
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", timezone.c_str(), 1); tzset();
   mqtt.setCallback(onMqtt); mqtt.setBufferSize(1024);
