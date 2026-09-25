@@ -391,6 +391,7 @@ void setup() {
   Serial.begin(115200);
   Serial0.begin(115200);
   prefs.begin("matrix", false);
+  const bool freshInstall = !prefs.isKey("admin") && !prefs.isKey("ap_pass");
   uint64_t id = ESP.getEfuseMac();
   // Preserve the identifier format used by existing MQTT Discovery entries.
   char suffix[13]; snprintf(suffix, sizeof(suffix), "%06X", uint32_t(id));
@@ -412,11 +413,9 @@ void setup() {
   selectedGif = prefs.getString("gif", ""); brightness = prefs.getUChar("brightness", 96);
   timezone = prefs.getString("tz", "UTC0");
   matrixEPin = prefs.getChar("e_pin", MATRIX_E_PIN);
-  // Format only on the first boot. An unexpected mount failure later must not
-  // silently destroy the user's saved GIF library.
-  bool freshFileSystem = !prefs.getBool("fs_init", false);
-  bool fsReady = LittleFS.begin(freshFileSystem);
-  if (fsReady && freshFileSystem) prefs.putBool("fs_init", true);
+  // Only a new device with no prior credentials may format an empty FS.
+  // Upgrades from older releases have credentials and preserve their GIFs.
+  bool fsReady = LittleFS.begin(freshInstall);
   if (!fsReady) { Serial.println("ERROR LittleFS: no se borraron los GIF"); Serial0.println("ERROR LittleFS: no se borraron los GIF"); }
   WiFi.mode(WIFI_AP_STA);
   if (ssid.length()) {
