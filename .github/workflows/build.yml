@@ -1,4 +1,4 @@
-name: Compilar y publicar instalador ESP32-S3
+name: Compilar y publicar instalador ESP32
 
 on:
   push:
