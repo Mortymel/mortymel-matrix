@@ -28,6 +28,7 @@ static String ssid, wifiPassword, mqttHost, mqttUser, mqttPassword, timezone;
 static uint16_t mqttPort = 1883;
 static String mode = "clock", message = "HOLA", selectedGif, activeGif;
 static uint8_t brightness = 96;
+static int8_t matrixEPin = MATRIX_E_PIN;
 static bool gifOpen = false, uploadError = false, otaError = false;
 static String uploadName;
 static size_t uploadBytes = 0;
@@ -235,7 +236,21 @@ static void registerRoutes() {
     d["mode"] = mode; d["message"] = message; d["gif"] = selectedGif;
     d["brightness"] = brightness; d["ssid"] = ssid; d["timezone"] = timezone;
     d["mqtt_host"] = mqttHost; d["mqtt_port"] = mqttPort; d["mqtt_user"] = mqttUser;
+    d["e_pin"] = matrixEPin;
     jsonReply(200, d);
+  });
+  web.on("/api/hardware", HTTP_POST, [] {
+    if (!authed()) return;
+    JsonDocument d; if (!bodyJson(d)) return;
+    if (!d["e_pin"].is<int>()) { errorReply(400, "GPIO E inválido"); return; }
+    int pin = d["e_pin"].as<int>();
+    if (pin != -1 && (pin < 0 || pin > 48 || (pin >= 26 && pin <= 32))) {
+      errorReply(400, "GPIO E fuera de rango o reservado para flash/PSRAM"); return;
+    }
+    matrixEPin = pin;
+    prefs.putChar("e_pin", matrixEPin);
+    JsonDocument ok; ok["ok"] = true; ok["restart"] = true; jsonReply(200, ok);
+    delay(150); ESP.restart();
   });
   web.on("/api/display", HTTP_POST, [] {
     if (!authed()) return;
@@ -393,6 +408,7 @@ void setup() {
   mode = prefs.getString("mode", "clock"); message = prefs.getString("message", "HOLA");
   selectedGif = prefs.getString("gif", ""); brightness = prefs.getUChar("brightness", 96);
   timezone = prefs.getString("tz", "UTC0");
+  matrixEPin = prefs.getChar("e_pin", MATRIX_E_PIN);
   if (!LittleFS.begin(true)) Serial.println("ERROR LittleFS");
   WiFi.mode(WIFI_AP_STA);
   if (ssid.length()) {
@@ -407,15 +423,13 @@ void setup() {
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", timezone.c_str(), 1); tzset();
   mqtt.setCallback(onMqtt); mqtt.setBufferSize(1024);
-#if MATRIX_E_PIN >= 0
-  HUB75_I2S_CFG cfg(64, 64, 1);
-  cfg.gpio.e = MATRIX_E_PIN;
-  matrix = new MatrixPanel_I2S_DMA(cfg);
-  if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
-  else { matrix->setBrightness8(brightness); decoder.begin(GIF_PALETTE_RGB565_LE); }
-#else
-  Serial.println("Panel desactivado: configura MATRIX_E_PIN para tu placa.");
-#endif
+  if (matrixEPin >= 0) {
+    HUB75_I2S_CFG cfg(64, 64, 1);
+    cfg.gpio.e = matrixEPin;
+    matrix = new MatrixPanel_I2S_DMA(cfg);
+    if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
+    else { matrix->setBrightness8(brightness); decoder.begin(GIF_PALETTE_RGB565_LE); }
+  } else Serial.println("Panel desactivado: configura GPIO E desde Sistema.");
   registerRoutes(); web.begin();
 }
 

@@ -17,30 +17,24 @@ inspira en el estilo de los relojes de píxeles de Clockwise. Este repositorio
 
 ## Primera versión
 
-- Compilación automática de firmware en GitHub Actions para cambios nuevos.
+- Compilación automática y página de instalación USB en GitHub Pages para ESP32-S3 DevKitC-1 con 8 MB de flash.
 - Un único firmware inicial, servidor web local en el ESP32 y asistente de Wi-Fi.
 - Reloj digital, texto editable, reproducción de GIF 64×64 desde LittleFS.
 - Subida, listado y borrado de GIF por HTTP; ajustes persistentes en Preferences.
 - MQTT opcional con Discovery de Home Assistant: texto, escena, brillo, y estado.
 - Actualización de firmware `.bin` mediante la página web (OTA).
 - Zona horaria POSIX configurable desde la web (por ejemplo, `EST5`).
-- Perfil de pantalla separable del resto: sin `MATRIX_E_PIN` válido arranca la
-  consola web, pero deja la matriz desactivada. Esto evita prometer un cableado
-  universal inexistente para las placas S3.
+- GPIO E configurable desde **Sistema**, con reinicio; la matriz arranca desactivada. Los demás GPIO HUB75 siguen siendo los predeterminados de la biblioteca para S3 y deben comprobarse en la placa real.
 
 ## Instalación
 
-1. Instala [PlatformIO](https://platformio.org/install) y abre esta carpeta.
-2. En `platformio.ini`, selecciona la variante y memoria de tu placa; asigna
-   `-DMATRIX_E_PIN=GPIO` al GPIO que conecta la línea E de tu panel 1/32 scan.
-   Los demás pines usan los predeterminados de la biblioteca HUB75 para S3;
-   el perfil real debe verificarse antes de conectar el panel.
-3. Compila y carga una vez con `pio run -t upload`.
-4. Abre el monitor serie a 115200: imprime el nombre y contraseña aleatoria
+1. Para una ESP32-S3 DevKitC-1 con 8 MB de flash, abre el [instalador web](https://mortymel.github.io/mortymel-matrix/) en Chrome o Edge de escritorio y selecciona el puerto USB. Para otras variantes, revisa `platformio.ini` y compila con [PlatformIO](https://platformio.org/install).
+2. El instalador carga bootloader, particiones y aplicación como imagen fusionada; el firmware arranca sin panel activo. En la web local, configura GPIO E en **Sistema** después de verificar el mapa de pines de la biblioteca y tu placa.
+3. Abre Logs & Console en el instalador o el monitor serie a 115200: imprime el nombre y contraseña aleatoria
    del punto de acceso inicial y la contraseña inicial de administración.
-5. Conéctate al punto de acceso, visita `http://192.168.4.1/`, inicia sesión
+4. Conéctate al punto de acceso, visita `http://192.168.4.1/`, inicia sesión
    y configura Wi-Fi. Después visita la IP que muestra el monitor serie.
-6. Configura el broker MQTT en la web y activa la integración MQTT de Home
+5. Configura el broker MQTT en la web y activa la integración MQTT de Home
    Assistant. Las entidades se publican con MQTT Discovery.
 
 La contraseña inicial de administración se imprime por serie al arrancar hasta
@@ -61,6 +55,8 @@ La interfaz HTTP está diseñada para una red local confiable: no abras el puert
 Los GIF se envían por HTTP y se guardan en LittleFS. MQTT transporta órdenes
 cortas y estados. Los cambios de medios y ajustes no requieren recompilar;
 añadir nuevas funciones sí requiere un firmware actualizado por OTA.
+
+La descarga del instalador es una imagen completa para USB en offset 0; **no** se debe cargar en la actualización OTA, que recibe únicamente `.pio/build/esp32-s3/firmware.bin`.
 
 ## Límites actuales
 

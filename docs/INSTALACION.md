@@ -5,28 +5,37 @@
 - Placa ESP32-S3. El perfil actual de PlatformIO es `esp32-s3-devkitc-1`.
 - Matriz HUB75 de 64×64 compatible, normalmente 1/32 scan.
 - Fuente de alimentación adecuada para la matriz y conexión de tierra común.
-- Python y PlatformIO para el primer flasheo; cable USB de datos.
+- Cable USB de datos y navegador Chrome o Edge de escritorio para la variante S3 DevKitC-1 de 8 MB; para otras variantes, Python y PlatformIO.
 - Wi-Fi 2,4 GHz. Broker MQTT solo si se necesita Home Assistant.
 
 ## Identificar el perfil de pantalla
 
 La biblioteca HUB75 usa un mapa predeterminado de GPIO para el chip S3, pero
 esto **no equivale al pinout universal de cualquier placa S3**. En particular,
-una matriz 64×64 1/32 scan necesita la señal E. En `platformio.ini`, cambiar
-`-DMATRIX_E_PIN=-1` por el GPIO conectado a E tras verificar el diseño de la
-placa. La compilación sin ese cambio ofrece web y MQTT y reporta pantalla no
-configurada. Otros GPIO solo se pueden cambiar tras definir un perfil de
-placa específico: esta primera versión no incluye dicho selector web.
+una matriz 64×64 1/32 scan necesita la señal E. En **Sistema**, definir GPIO E tras verificar el diseño de la placa. El firmware
+de instalación inicia con E = -1 y no activa el panel. El resto de señales
+usa los GPIO predeterminados de la biblioteca; para cambiarlos hay que compilar
+un perfil específico. Guardar GPIO E reinicia el ESP32.
 
 Antes de energizar el panel, consultar el fabricante sobre su tipo de barrido,
 chip controlador y consumo. No usar el pin 5 V del ESP32 para alimentar la
 matriz.
 
-## Preparar y flashear
+## Instalar desde el navegador
+
+Para la ESP32-S3 DevKitC-1 de 8 MB, abrir
+[Mortymel Matrix Installer](https://mortymel.github.io/mortymel-matrix/) con
+Chrome o Edge de escritorio por HTTPS. Conectar por cable USB de datos, pulsar
+**Conectar e instalar** y elegir el puerto. ESP Web Tools pide confirmación si
+se van a borrar los datos. Abrir **Logs & Console** tras terminar y reiniciar
+la placa para volver a ver las contraseñas iniciales. La página instala una
+imagen fusionada para USB; no cargar esa imagen en OTA.
+
+## Compilar y flashear manualmente
 
 1. Abrir el directorio del proyecto en VS Code con PlatformIO.
 2. Ajustar `board` a la variante real de S3 y su esquema de memoria.
-3. Ajustar `MATRIX_E_PIN` si el perfil de GPIO restante es compatible.
+3. Verificar los GPIO predeterminados de HUB75 y, si procede, ajustar `MATRIX_E_PIN` como valor inicial (también configurable en la web).
 4. La página `include/web_ui.h` ya está incluida. Al editar
    `web/index.html`, ejecutar `python3 scripts/embed_web.py` antes de compilar.
 5. Ejecutar `pio run -t upload` y abrir el monitor con `pio device monitor -b
@@ -59,7 +68,7 @@ para recuperar acceso cuando falla la conexión Wi-Fi.
 
 ## Actualizaciones siguientes
 
-Desde **Sistema**, cargar un `.bin` compatible con exactamente la variante
+Desde **Sistema**, cargar solo el `.pio/build/esp32-s3/firmware.bin` de la compilación, nunca la imagen fusionada de instalación USB, compatible con exactamente la variante
 instalada. La operación OTA necesita particiones de aplicación compatibles.
 Verificar que el dispositivo inicia correctamente después. Los GIF, la escena,
 el Wi-Fi y MQTT se conservan en el almacenamiento del equipo. No subir un

@@ -35,3 +35,7 @@ curl --user admin --get http://IP_DEL_ESP32/api/status
 
 No exponer estas rutas en Internet. La carga OTA es una operación sensible:
 usar únicamente binarios propios construidos para el modelo de hardware.
+
+## Perfil de hardware
+
+`POST /api/hardware` con JSON `{ "e_pin": 16 }` guarda el GPIO E y reinicia. `-1` desactiva la matriz. `GET /api/status` incluye `e_pin` y el estado de `matrix`. Las demás señales HUB75 conservan los pines predeterminados de la biblioteca. Requiere autenticación.
