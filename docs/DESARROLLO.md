@@ -36,8 +36,10 @@ Mantener los nombres de temas MQTT y endpoints para preservar paneles de HO.
 6. Con broker local, comprobar MQTT Discovery, estados y comandos.
 7. Probar OTA con particiones apropiadas; verificar arranque tras actualizar.
 
-En este entorno se comprobó la generación de HTML y la sintaxis JS. La
-compilación PlatformIO y las pruebas físicas aún no se han ejecutado.
+Se comprobó la generación de HTML y la sintaxis JS. GitHub Actions compila
+`esp32-s3` con PlatformIO en cada envío; la primera compilación satisfactoria
+se completó con el perfil de pantalla desactivada (`MATRIX_E_PIN=-1`). Las
+pruebas en una placa y panel reales aún no se han ejecutado.
 
 ## Licencias
 
