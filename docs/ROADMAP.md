@@ -2,10 +2,10 @@
 
 ## Hecho en este prototipo
 
-- Consola web en español con aspecto de reloj de píxeles.
+- Consola local e instalador público en español con estética de reloj de píxeles.
 - Un único firmware que incluye su página web y permite administrar GIF.
 - Reloj, texto y GIF en matriz 64×64 con hardware compatible.
-- Ajustes persistentes y panel de actualización OTA.
+- Ajustes persistentes, GPIO E editable y descarga OTA separada de la imagen USB.
 - MQTT Discovery y entidades para escena, texto, brillo y estado.
 
 ## Siguiente etapa: compatibilidad
@@ -23,7 +23,7 @@
 - Biblioteca de GIF con listas de reproducción, horarios, prioridades de
   mensajes, vista previa de fotogramas y fallback cuando no hay red.
 - Escalado y optimización de GIF en el navegador antes de enviarlos al ESP32.
-- Guardado seguro de archivos: límites por modelo y escritura temporal.
+- Mejoras del almacenamiento: avisos de espacio libre, integridad de GIF y recuperación de errores.
 
 ## Siguiente etapa: Home Assistant
 

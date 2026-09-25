@@ -1,4 +1,6 @@
 .pio/
+dist/
+__pycache__/
 .vscode/
 *.bin
 secrets.h

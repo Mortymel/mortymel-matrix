@@ -1,72 +1,49 @@
 # Mortymel Matrix
 
-Firmware original para ESP32-S3 y matrices HUB75 64×64. Su consola oscura se
-inspira en el estilo de los relojes de píxeles de Clockwise. Este repositorio
-**no incorpora código, imágenes ni esferas del proyecto Clockwise**.
+Firmware abierto para una matriz HUB75 de 64 × 64 controlada por ESP32-S3. Incluye una consola web local para reloj digital, texto y GIF, y control opcional desde Home Assistant mediante MQTT. Su estética recuerda a los relojes de píxeles, pero el código y la interfaz son originales; no incorpora esferas ni recursos de Clockwise.
+
+**[Instalar desde el navegador](https://mortymel.github.io/mortymel-matrix/) · [Leer documentación](https://mortymel.github.io/mortymel-matrix/docs/)**
+
+## Estado y compatibilidad
+
+| Componente | Estado |
+| --- | --- |
+| Firmware e instalador USB | Compilan y se publican automáticamente. |
+| Placa precompilada | ESP32-S3 DevKitC-1 **N8, 8 MB QD, sin PSRAM**. |
+| Panel | Una HUB75 64 × 64 de barrido 1/32 compatible, tras verificar alimentación y mapa de GPIO. |
+| Primera configuración | AP temporal, credenciales aleatorias visibles a 115200 por USB nativo o USB-UART, web local con autenticación. |
+| Contenido | Reloj digital, mensaje y GIF de hasta 64 × 64 y 400 KB cada uno. |
+| Home Assistant | MQTT Discovery para escena, mensaje, brillo y estado. Requiere un broker. |
+| Validación física | Pendiente con la placa y el panel concretos. |
+
+El instalador es **solo para la variante N8 indicada**. El firmware arranca con la matriz desactivada. El GPIO E se configura en la web local; los demás GPIO son los predeterminados de la biblioteca HUB75 y se deben cotejar con el montaje real. El instalador no detecta si el panel conectado tiene el barrido ni el controlador esperados.
+
+## Primeros pasos
+
+1. Abre el [instalador HTTPS](https://mortymel.github.io/mortymel-matrix/) en Chrome o Edge de escritorio, conecta la placa por un cable USB de datos e instala el firmware.
+2. Abre **Logs & Console** a 115200 y pulsa RESET para leer el nombre y contraseña del AP, y la contraseña web. Ambos conectores de la DevKitC-1, USB nativo y USB-UART, ofrecen esos mensajes.
+3. Conéctate al AP `Mortymel-XXXXXX` y entra en `http://192.168.4.1/` con usuario `admin`. Configura Wi-Fi y cambia la contraseña de administración.
+4. Comprueba todos los GPIO y el tipo de panel antes de configurar la señal E en **Sistema**. Sube GIF desde **Biblioteca GIF**; opcionalmente configura MQTT en **Red y MQTT**.
+
+El AP se cierra al conectar a Wi-Fi y vuelve a abrirse si se pierde la conexión. La web del dispositivo usa HTTP y está pensada para una red local confiable; no la publiques en Internet. Consulta la [guía de instalación y recuperación](docs/INSTALACION.md) si algún paso falla.
+
+## Descargas USB y OTA
+
+La página publica **dos archivos distintos**: la imagen fusionada para instalar por USB desde offset 0 y el `.bin` de la aplicación para actualizar en la consola local, sección **Sistema**. No subas la imagen USB por OTA. La página muestra versión, tamaños y SHA-256 de ambos archivos.
 
 ## Documentación
 
-| Guía | Contenido |
+| Guía | Tema |
 | --- | --- |
-| [Instalación](docs/INSTALACION.md) | Primera carga, red, Home Assistant y recuperación. |
-| [Arquitectura](docs/ARQUITECTURA.md) | Componentes, almacenamiento y límites del prototipo. |
-| [API web](docs/API.md) | Rutas, formatos y validaciones. |
-| [MQTT](docs/MQTT.md) | Discovery, temas y automatización de ejemplo. |
-| [Desarrollo](docs/DESARROLLO.md) | Archivos, cambios y verificación. |
-| [Hoja de ruta](docs/ROADMAP.md) | Funciones y compatibilidad pendientes. |
+| [Instalación](docs/INSTALACION.md) | Hardware, primer arranque y recuperación. |
+| [MQTT](docs/MQTT.md) | Entidades y automatización en Home Assistant. |
+| [API web](docs/API.md) | Endpoints y límites. |
+| [Arquitectura](docs/ARQUITECTURA.md) | Componentes y comportamiento. |
+| [Desarrollo](docs/DESARROLLO.md) | Compilar, empaquetar y verificar. |
+| [Hoja de ruta](docs/ROADMAP.md) | Trabajo pendiente. |
 
-## Primera versión
+## Límites
 
-- Compilación automática y página de instalación USB en GitHub Pages para ESP32-S3 DevKitC-1 con 8 MB de flash.
-- Un único firmware inicial, servidor web local en el ESP32 y asistente de Wi-Fi.
-- Reloj digital, texto editable, reproducción de GIF 64×64 desde LittleFS.
-- Subida, listado y borrado de GIF por HTTP; ajustes persistentes en Preferences.
-- MQTT opcional con Discovery de Home Assistant: texto, escena, brillo, y estado.
-- Actualización de firmware `.bin` mediante la página web (OTA).
-- Zona horaria POSIX configurable desde la web (por ejemplo, `EST5`).
-- GPIO E configurable desde **Sistema**, con reinicio; la matriz arranca desactivada. Los demás GPIO HUB75 siguen siendo los predeterminados de la biblioteca para S3 y deben comprobarse en la placa real.
+Esta versión aún no ofrece un mapa universal de GPIO, soporte para todos los controladores HUB75, sensores, esferas de Clockwise ni subida de GIF dentro de la interfaz de Home Assistant. La vista previa web es aproximada y la reproducción física está pendiente de pruebas con hardware. Los GIF se cargan en la web local sin reflashear.
 
-## Instalación
-
-1. Para una ESP32-S3 DevKitC-1 con 8 MB de flash, abre el [instalador web](https://mortymel.github.io/mortymel-matrix/) en Chrome o Edge de escritorio y selecciona el puerto USB. Para otras variantes, revisa `platformio.ini` y compila con [PlatformIO](https://platformio.org/install).
-2. El instalador carga bootloader, particiones y aplicación como imagen fusionada; el firmware arranca sin panel activo. En la web local, configura GPIO E en **Sistema** después de verificar el mapa de pines de la biblioteca y tu placa.
-3. Abre Logs & Console en el instalador o el monitor serie a 115200: imprime el nombre y contraseña aleatoria
-   del punto de acceso inicial y la contraseña inicial de administración.
-4. Conéctate al punto de acceso, visita `http://192.168.4.1/`, inicia sesión
-   y configura Wi-Fi. Después visita la IP que muestra el monitor serie.
-5. Configura el broker MQTT en la web y activa la integración MQTT de Home
-   Assistant. Las entidades se publican con MQTT Discovery.
-
-La contraseña inicial de administración se imprime por serie al arrancar hasta
-que se cambia desde la web. Cambia esa contraseña al configurar el dispositivo.
-La interfaz HTTP está diseñada para una red local confiable: no abras el puerto
-80 del ESP32 a Internet. El AP de recuperación se activa cuando falta Wi-Fi.
-
-## Arquitectura
-
-`src/main.cpp`: pantalla, GIF, web, MQTT, almacenamiento, OTA.
-
-`include/web_ui.h`: consola web autocontenida, incluida en el firmware.
-
-`web/`: fuente legible del frontend; `scripts/embed_web.py` crea `include/web_ui.h`.
-
-`docs/ROADMAP.md`: compatibilidad de placas y funciones siguientes.
-
-Los GIF se envían por HTTP y se guardan en LittleFS. MQTT transporta órdenes
-cortas y estados. Los cambios de medios y ajustes no requieren recompilar;
-añadir nuevas funciones sí requiere un firmware actualizado por OTA.
-
-La descarga del instalador es una imagen completa para USB en offset 0; **no** se debe cargar en la actualización OTA, que recibe únicamente `.pio/build/esp32-s3/firmware.bin`.
-
-## Límites actuales
-
-Primer prototipo para una sola matriz 64×64. El reloj digital y los GIF
-requieren panel compatible y pines ajustados. No se han probado todavía en la
-placa ni el panel concretos del usuario. No se implementan aún el motor de
-esferas de Clockwise, sensores opcionales, listas de reproducción ni una app
-que suba archivos directamente desde la interfaz de Home Assistant. La web
-local del ESP32 ya permite subirlos sin reflashear.
-
-Clockwise es de [jnthas](https://github.com/jnthas/clockwise), bajo MIT; sus
-gráficos y personajes no se incluyen. Bibliotecas: [HUB75 DMA](https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA),
-[AnimatedGIF](https://github.com/bitbank2/AnimatedGIF), PubSubClient y ArduinoJson.
+Código MIT de Mortymel. Bibliotecas de terceros: [HUB75 DMA](https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA), [AnimatedGIF](https://github.com/bitbank2/AnimatedGIF), Adafruit GFX, PubSubClient y ArduinoJson. Clockwise es de [jnthas](https://github.com/jnthas/clockwise); no se reutilizan sus archivos en este repositorio.

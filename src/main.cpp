@@ -30,6 +30,7 @@ static String mode = "clock", message = "HOLA", selectedGif, activeGif;
 static uint8_t brightness = 96;
 static int8_t matrixEPin = MATRIX_E_PIN;
 static bool gifOpen = false, uploadError = false, otaError = false;
+static bool apActive = false;
 static String uploadName;
 static size_t uploadBytes = 0;
 static unsigned long lastDraw = 0, nextFrame = 0, lastMqtt = 0, lastConnect = 0, lastWifiRetry = 0;
@@ -388,9 +389,10 @@ static void registerRoutes() {
 
 void setup() {
   Serial.begin(115200);
+  Serial0.begin(115200);
   prefs.begin("matrix", false);
   uint64_t id = ESP.getEfuseMac();
-  char suffix[13]; snprintf(suffix, sizeof(suffix), "%06X", uint32_t(id));
+  char suffix[7]; snprintf(suffix, sizeof(suffix), "%06X", uint32_t(id) & 0xFFFFFF);
   deviceId = "matrix_" + String(suffix);
   adminPassword = prefs.getString("admin", "");
   apPassword = prefs.getString("ap_pass", "");
@@ -409,17 +411,27 @@ void setup() {
   selectedGif = prefs.getString("gif", ""); brightness = prefs.getUChar("brightness", 96);
   timezone = prefs.getString("tz", "UTC0");
   matrixEPin = prefs.getChar("e_pin", MATRIX_E_PIN);
-  if (!LittleFS.begin(true)) Serial.println("ERROR LittleFS");
+  // Format only on the first boot. An unexpected mount failure later must not
+  // silently destroy the user's saved GIF library.
+  bool freshFileSystem = !prefs.getBool("fs_init", false);
+  bool fsReady = LittleFS.begin(freshFileSystem);
+  if (fsReady && freshFileSystem) prefs.putBool("fs_init", true);
+  if (!fsReady) { Serial.println("ERROR LittleFS: no se borraron los GIF"); Serial0.println("ERROR LittleFS: no se borraron los GIF"); }
   WiFi.mode(WIFI_AP_STA);
   if (ssid.length()) {
     WiFi.begin(ssid.c_str(), wifiPassword.c_str());
     for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; ++i) delay(200);
   }
   if (WiFi.status() != WL_CONNECTED) {
-    WiFi.softAP(("Mortymel-" + String(suffix)).c_str(), apPassword.c_str());
+    apActive = WiFi.softAP(("Mortymel-" + String(suffix)).c_str(), apPassword.c_str());
     Serial.printf("AP: Mortymel-%s  clave: %s  web: http://192.168.4.1/\n", suffix, apPassword.c_str());
-  } else Serial.printf("Web: http://%s/\n", WiFi.localIP().toString().c_str());
+    Serial0.printf("AP: Mortymel-%s  clave: %s  web: http://192.168.4.1/\n", suffix, apPassword.c_str());
+  } else {
+    Serial.printf("Web: http://%s/\n", WiFi.localIP().toString().c_str());
+    Serial0.printf("Web: http://%s/\n", WiFi.localIP().toString().c_str());
+  }
   Serial.printf("Usuario web: admin  clave inicial/actual: %s\n", adminPassword.c_str());
+  Serial0.printf("Usuario web: admin  clave inicial/actual: %s\n", adminPassword.c_str());
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", timezone.c_str(), 1); tzset();
   mqtt.setCallback(onMqtt); mqtt.setBufferSize(1024);
@@ -435,10 +447,14 @@ void setup() {
 
 void loop() {
   web.handleClient(); maintainMqtt(); maintainDisplay();
+  if (apActive && WiFi.status() == WL_CONNECTED) {
+    WiFi.softAPdisconnect(true); apActive = false;
+  }
   if (ssid.length() && WiFi.status() != WL_CONNECTED && millis() - lastWifiRetry > 12000) {
     lastWifiRetry = millis();
+    WiFi.mode(WIFI_AP_STA);
     WiFi.reconnect();
-    WiFi.softAP(("Mortymel-" + deviceId.substring(7)).c_str(), apPassword.c_str());
+    apActive = WiFi.softAP(("Mortymel-" + deviceId.substring(7)).c_str(), apPassword.c_str());
   }
   delay(2);
 }

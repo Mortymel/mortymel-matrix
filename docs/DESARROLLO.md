@@ -1,49 +1,42 @@
-# Guía de desarrollo
+# Desarrollo y publicación
 
-## Organización
+## Estructura
 
-```text
-include/web_ui.h     Página compilada en el firmware
-web/index.html       Fuente de la consola
-src/main.cpp         Firmware y API
-scripts/embed_web.py Genera include/web_ui.h
-platformio.ini       Perfil inicial ESP32-S3
-docs/                Instalación, API, MQTT, arquitectura y hoja de ruta
+| Ruta | Propósito |
+| --- | --- |
+| `src/main.cpp` | Firmware, web local, GIF, MQTT, pantalla y OTA. |
+| `web/index.html` | Fuente de la consola incluida en el firmware. |
+| `include/web_ui.h` | Consola generada; se versiona para compilar sin fase adicional. |
+| `flasher/` | Fuente HTML, CSS y JavaScript del instalador público. |
+| `scripts/embed_web.py` | Genera `include/web_ui.h`. |
+| `scripts/package_flasher.py` | Fusiona el firmware USB, copia OTA y genera guías y huellas. |
+| `scripts/check_site.py` | Verifica imágenes, hashes, manifest y enlaces locales. |
+| `docs/` | Guías Markdown fuente del sitio y del repositorio. |
+| `VERSION` | Versión mostrada en el instalador y en su manifest. |
+
+## Compilar y generar el sitio
+
+El perfil `esp32-s3` de `platformio.ini` corresponde solo a la DevKitC-1 N8 de 8 MB. Antes de dar soporte a otra variante, comprobar flash, PSRAM, tabla de particiones, GPIO del panel, controlador y barrido. Para cambiar la consola embebida, edita `web/index.html` y regenera el encabezado.
+
+```bash
+python -m pip install platformio esptool==4.8.1 Markdown==3.7
+python scripts/embed_web.py
+pio run -e esp32-s3
+python scripts/package_flasher.py
+python scripts/check_site.py
 ```
 
-## Modificar interfaz
+El resultado está en `dist/`: `index.html`, `docs/`, `manifest.json`, `build.json`, imagen fusionada USB y archivo OTA de aplicación. `dist/` es generado y no se versiona. La imagen S3 sitúa el bootloader en `0x0`, particiones en `0x8000`, selector OTA en `0xe000` y aplicación en `0x10000`; `check_site.py` comprueba la cabecera de la aplicación y SHA-256. La imagen USB no se usa para OTA.
 
-Editar `web/index.html`, ejecutar `python3 scripts/embed_web.py` y comprobar
-la sintaxis del JavaScript. `include/web_ui.h` está versionado para permitir
-compilar el proyecto sin una fase adicional de generación. La consola web
-actual muestra una vista previa aproximada; no captura imágenes del panel.
+GitHub Actions ejecuta la misma compilación y verificación en `push` y `pull_request`. En `main` publica el sitio mediante GitHub Pages. El instalador usa ESP Web Tools, con el manifiesto y los binarios en el mismo origen HTTPS.
 
-## Modificar firmware
+## Pruebas con hardware pendientes
 
-La entrada `esp32-s3` en `platformio.ini` es el perfil inicial. Antes de crear
-un perfil nuevo, verificar barrido y chip de la matriz, GPIO disponibles,
-memoria flash, tipo de PSRAM, Wi-Fi durante DMA y tabla de particiones OTA.
-Mantener los nombres de temas MQTT y endpoints para preservar paneles de HO.
+1. Instalar con el puerto USB nativo y con USB-UART de una DevKitC-1 N8; leer las claves a 115200 tras RESET.
+2. Conectar AP, cambiar la clave web y pasar a Wi-Fi; verificar cierre y recuperación del AP.
+3. Confirmar el mapa de pines y el barrido del panel antes de habilitar E. Revisar reloj, texto, color, brillo y GIF.
+4. Comprobar límites y persistencia de GIF después de reiniciar; forzar un fallo de montaje sin perder datos.
+5. Probar entidades MQTT y automatizaciones con un broker real de Home Assistant.
+6. Actualizar con el `.bin` OTA publicado y confirmar reinicio y persistencia de preferencias y GIF.
 
-## Verificaciones mínimas
-
-1. `python3 scripts/embed_web.py` genera un encabezado actual.
-2. `pio run -e esp32-s3` compila sin panel configurado.
-3. Con una placa conectada, `pio run -e esp32-s3 -t upload` permite acceder a
-   la web, cambiar credenciales y configurar Wi-Fi.
-4. Con un panel verificado, comprobar color, barrido, brillo, reloj y GIF.
-5. Cargar un GIF de prueba y validar reinicio, borrado y selección.
-6. Con broker local, comprobar MQTT Discovery, estados y comandos.
-7. Probar OTA con particiones apropiadas; verificar arranque tras actualizar.
-
-Se comprobó la generación de HTML y la sintaxis JS. GitHub Actions compila
-`esp32-s3` con PlatformIO en cada envío; la primera compilación satisfactoria
-se completó con el perfil de pantalla desactivada (`MATRIX_E_PIN=-1`). Las
-pruebas en una placa y panel reales aún no se han ejecutado.
-
-## Licencias
-
-El código de este repositorio se distribuye bajo MIT como Mortymel Matrix.
-Clockwise también es MIT, pero su código no forma parte de este prototipo.
-Conservar los avisos de licencias de cada dependencia y revisar por separado
-las licencias de fuentes, GIF, sprites y personajes que se distribuyan.
+Una compilación correcta y el despliegue público no sustituyen estas pruebas físicas.

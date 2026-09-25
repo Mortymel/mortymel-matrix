@@ -1,82 +1,44 @@
-# Instalación inicial
+# Instalación y recuperación
 
-## Requisitos
+## Antes de empezar
 
-- Placa ESP32-S3. El perfil actual de PlatformIO es `esp32-s3-devkitc-1`.
-- Matriz HUB75 de 64×64 compatible, normalmente 1/32 scan.
-- Fuente de alimentación adecuada para la matriz y conexión de tierra común.
-- Cable USB de datos y navegador Chrome o Edge de escritorio para la variante S3 DevKitC-1 de 8 MB; para otras variantes, Python y PlatformIO.
-- Wi-Fi 2,4 GHz. Broker MQTT solo si se necesita Home Assistant.
+El instalador precompilado corresponde a **ESP32-S3 DevKitC-1 N8**: flash QD de 8 MB, sin PSRAM. Se necesita un cable USB de datos, Chrome o Edge de escritorio y una conexión a la página por HTTPS. El ESP32 usa Wi-Fi de 2,4 GHz. Para Home Assistant hace falta un broker MQTT accesible desde esa red.
 
-## Identificar el perfil de pantalla
+Una matriz HUB75 64 × 64 necesita alimentación externa adecuada y tierra común con el ESP32. Comprueba su controlador, barrido y todos los GPIO antes de conectarla. Este proyecto inicia con la salida de matriz desactivada (`GPIO E = -1`); solo E es configurable desde la web, y las demás señales usan el mapa predeterminado de la biblioteca HUB75 para S3. Ese mapa **no es universal**. No alimentes la matriz desde el pin 5 V del ESP32.
 
-La biblioteca HUB75 usa un mapa predeterminado de GPIO para el chip S3, pero
-esto **no equivale al pinout universal de cualquier placa S3**. En particular,
-una matriz 64×64 1/32 scan necesita la señal E. En **Sistema**, definir GPIO E tras verificar el diseño de la placa. El firmware
-de instalación inicia con E = -1 y no activa el panel. El resto de señales
-usa los GPIO predeterminados de la biblioteca; para cambiarlos hay que compilar
-un perfil específico. Guardar GPIO E reinicia el ESP32.
+## Primera instalación USB
 
-Antes de energizar el panel, consultar el fabricante sobre su tipo de barrido,
-chip controlador y consumo. No usar el pin 5 V del ESP32 para alimentar la
-matriz.
+1. Entra al [instalador Mortymel Matrix](https://mortymel.github.io/mortymel-matrix/) desde Chrome o Edge de escritorio.
+2. Conecta el puerto USB nativo **USB** o el conector **USB-UART** de la DevKitC-1, pulsa **Conectar e instalar** y elige el puerto que corresponda. Si existe otro programa que usa ese puerto, ciérralo.
+3. El instalador puede ofrecer borrar la memoria: esto elimina ajustes, contraseñas y GIF anteriores. Continúa solo si quieres una instalación nueva. Espera a que termine el flasheo.
+4. Abre **Logs & Console** en el instalador a 115200 baudios y pulsa RESET. Se imprimen el AP y su clave, además del usuario `admin` y su contraseña web inicial. Si no aparecen, prueba el otro puerto USB o abre el monitor de PlatformIO. Las claves se vuelven a imprimir al reiniciar.
+5. Conéctate al AP `Mortymel-XXXXXX` y visita `http://192.168.4.1/`. Inicia sesión, configura Wi-Fi en **Red y MQTT** y cambia la contraseña web en **Sistema**.
+6. Cuando el ESP32 se conecta a Wi-Fi, cierra el AP. La dirección IP local se imprime por serie. Si luego falla la red, el AP se reactiva para recuperación.
 
-## Instalar desde el navegador
+Se generan contraseñas aleatorias distintas para AP y web. Se guardan en NVS; reiniciar no las cambia. No publiques la interfaz HTTP en Internet.
 
-Para la ESP32-S3 DevKitC-1 de 8 MB, abrir
-[Mortymel Matrix Installer](https://mortymel.github.io/mortymel-matrix/) con
-Chrome o Edge de escritorio por HTTPS. Conectar por cable USB de datos, pulsar
-**Conectar e instalar** y elegir el puerto. ESP Web Tools pide confirmación si
-se van a borrar los datos. Abrir **Logs & Console** tras terminar y reiniciar
-la placa para volver a ver las contraseñas iniciales. La página instala una
-imagen fusionada para USB; no cargar esa imagen en OTA.
+## Activar la matriz
 
-## Compilar y flashear manualmente
+Solo después de comprobar el cableado completo y la compatibilidad del barrido, abre **Sistema**, introduce el GPIO conectado a E y guarda. El dispositivo se reinicia. Si la matriz no funciona, vuelve a `-1` y revisa todos los pines predeterminados, la alimentación y el controlador; para cambiar otras señales hay que crear un perfil y compilar. La web informa si el controlador de pantalla pudo iniciarse, pero ese estado **no confirma** que la imagen se vea correctamente.
 
-1. Abrir el directorio del proyecto en VS Code con PlatformIO.
-2. Ajustar `board` a la variante real de S3 y su esquema de memoria.
-3. Verificar los GPIO predeterminados de HUB75 y, si procede, ajustar `MATRIX_E_PIN` como valor inicial (también configurable en la web).
-4. La página `include/web_ui.h` ya está incluida. Al editar
-   `web/index.html`, ejecutar `python3 scripts/embed_web.py` antes de compilar.
-5. Ejecutar `pio run -t upload` y abrir el monitor con `pio device monitor -b
-   115200`. La primera instalación requiere USB.
+## Integrar Home Assistant
 
-## Entrar a la consola
+1. Configura un broker MQTT y la [integración MQTT de Home Assistant](https://www.home-assistant.io/integrations/mqtt/) para ese broker.
+2. En la consola del ESP32 abre **Red y MQTT** y guarda servidor, puerto y credenciales. La pantalla de inicio indica si MQTT está conectado.
+3. La integración recibirá por Discovery las entidades `Escena`, `Mensaje`, `Brillo` y `Estado`. Sube los GIF desde la web local del ESP32 y elige allí el archivo. [Detalles de temas y ejemplo](MQTT.md).
 
-Al primer arranque se generan contraseñas independientes para el punto de
-acceso y para la web. El monitor serie imprime:
+## Actualizar sin borrar configuración
 
-- `AP: Mortymel-XXXXXX`, contraseña y `http://192.168.4.1/`, cuando la placa
-  todavía no tiene Wi-Fi funcional.
-- `Usuario web: admin`, contraseña inicial o actual.
+En la [página del instalador](https://mortymel.github.io/mortymel-matrix/#descargas) descarga **firmware OTA (aplicación solamente)**. En la web local del ESP32 abre **Sistema → Actualización por Wi-Fi**, selecciona ese `.bin` y espera al reinicio. La imagen **USB completa** se escribe desde offset 0 y **no sirve para OTA**. Usa siempre un firmware correspondiente al perfil de placa instalado. Las preferencias y los GIF se conservan en una actualización OTA normal.
 
-Conectarse al AP desde un teléfono o PC, abrir la URL, iniciar sesión y guardar
-SSID y contraseña Wi-Fi en **Red y MQTT**. Si el ESP32 ya se conectó a la red,
-el monitor mostrará su IP local. Cambiar la contraseña de administración en
-**Sistema**. La contraseña del AP se conserva de forma persistente y se usa
-para recuperar acceso cuando falla la conexión Wi-Fi.
+## Compilar manualmente
 
-## Home Assistant
+Abre el proyecto con PlatformIO y revisa `platformio.ini`. Para un hardware diferente, modifica primero el perfil de placa, tamaño y modo de flash, memoria y mapa de GPIO. Ejecuta `python scripts/embed_web.py`, `pio run -e esp32-s3` y, con la DevKitC-1 conectada, `pio run -e esp32-s3 -t upload`. Abre `pio device monitor -b 115200` en el puerto correcto. El archivo de aplicación queda en `.pio/build/esp32-s3/firmware.bin`.
 
-1. Instalar o activar un broker MQTT accesible desde el ESP32.
-2. Configurar la integración MQTT de Home Assistant con ese broker.
-3. En **Red y MQTT**, introducir host, puerto, usuario y contraseña del broker.
-4. Tras conectarse, el ESP32 publica descubrimiento MQTT para cuatro entidades
-   del dispositivo: `Escena`, `Mensaje`, `Brillo`, `Estado`.
-5. Usar las entidades en un panel o automatización. Los GIF se cargan en la
-   web local del ESP32, en **Biblioteca GIF**.
+## Recuperación
 
-## Actualizaciones siguientes
-
-Desde **Sistema**, cargar solo el `.pio/build/esp32-s3/firmware.bin` de la compilación, nunca la imagen fusionada de instalación USB, compatible con exactamente la variante
-instalada. La operación OTA necesita particiones de aplicación compatibles.
-Verificar que el dispositivo inicia correctamente después. Los GIF, la escena,
-el Wi-Fi y MQTT se conservan en el almacenamiento del equipo. No subir un
-binario destinado a otra placa.
-
-## Volver a un estado funcional
-
-Si la red falla, consultar la consola serie y conectarse al AP de recuperación.
-Si el firmware no inicia y OTA no funciona, el método de recuperación es
-flashear de nuevo por USB. El prototipo aún no implementa una opción web de
-restablecimiento ni prueba automatizada de rollback.
+- **El puerto no aparece:** prueba un cable de datos, cambia de conector, libera el puerto en otras aplicaciones. Para entrar en modo descarga, mantén BOOT, pulsa RESET y suelta BOOT.
+- **No hay registro de arranque:** abre el monitor a 115200 antes de pulsar RESET; la placa puede presentar dos puertos serie distintos.
+- **Wi-Fi incorrecto:** espera a que vuelva a aparecer el AP temporal, conéctate y corrige la red desde la web local.
+- **Panel oscuro:** deja E en `-1` hasta verificar pines, barrido, controlador y fuente. No se ha probado el panel concreto del usuario.
+- **Firmware no inicia:** reinstala por USB. El borrado completo restaura el estado inicial, pero elimina NVS y GIF; no existe restauración automática de esos datos.
