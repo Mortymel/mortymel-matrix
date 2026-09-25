@@ -16,7 +16,7 @@
 
 ## Compilar y generar el sitio
 
-El perfil `esp32-s3` de `platformio.ini` corresponde solo a la DevKitC-1 N8 de 8 MB. Antes de dar soporte a otra variante, comprobar flash, PSRAM, tabla de particiones, GPIO del panel, controlador y barrido. Para cambiar la consola embebida, edita `web/index.html` y regenera el encabezado.
+Los perfiles `s3-4mb`, `esp32-s3` y `s3-16mb` cubren flash QD de 4/8/16 MB. Antes de dar soporte a otra variante, comprobar flash QD/OPI, PSRAM, particiones, GPIO, controlador y barrido. Consulta [Cableado](CABLEADO.md). Para cambiar la consola embebida, edita `web/index.html` y regenera el encabezado.
 
 ```bash
 python -m pip install platformio esptool==4.8.1 Markdown==3.7
@@ -26,13 +26,13 @@ python scripts/package_flasher.py
 python scripts/check_site.py
 ```
 
-El resultado está en `dist/`: `index.html`, `docs/`, `manifest.json`, `build.json`, imagen fusionada USB y archivo OTA de aplicación. `dist/` es generado y no se versiona. La imagen S3 sitúa el bootloader en `0x0`, particiones en `0x8000`, selector OTA en `0xe000` y aplicación en `0x10000`; `check_site.py` comprueba la cabecera de la aplicación y SHA-256. La imagen USB no se usa para OTA.
+El resultado está en `dist/`: `index.html`, `docs/`, tres manifests por capacidad, `build.json`, imágenes fusionadas USB y archivos OTA por perfil. `manifest.json` sigue apuntando a 8 MB por compatibilidad. `dist/` es generado y no se versiona. La imagen S3 sitúa el bootloader en `0x0`, particiones en `0x8000`, selector OTA en `0xe000` y aplicación en `0x10000`; `check_site.py` comprueba la cabecera de la aplicación y SHA-256. La imagen USB no se usa para OTA.
 
 GitHub Actions ejecuta la misma compilación y verificación en `push` y `pull_request`. En `main` publica el sitio mediante GitHub Pages. El instalador usa ESP Web Tools, con el manifiesto y los binarios en el mismo origen HTTPS.
 
 ## Pruebas con hardware pendientes
 
-1. Instalar con el puerto USB nativo y con USB-UART de una DevKitC-1 N8; leer las claves a 115200 tras RESET.
+1. Instalar los perfiles 4/8/16 MB en hardware S3 QD verificado; leer las claves a 115200 tras RESET.
 2. Conectar AP, cambiar la clave web y pasar a Wi-Fi; verificar cierre y recuperación del AP.
 3. Confirmar el mapa de pines y el barrido del panel antes de habilitar E. Revisar reloj, texto, color, brillo y GIF.
 4. Comprobar límites y persistencia de GIF después de reiniciar; forzar un fallo de montaje sin perder datos.

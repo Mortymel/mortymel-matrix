@@ -5,7 +5,7 @@
 - Consola local e instalador público en español con estética de reloj de píxeles.
 - Un único firmware que incluye su página web y permite administrar GIF.
 - Reloj, texto y GIF en matriz 64×64 con hardware compatible.
-- Ajustes persistentes, GPIO E editable y descarga OTA separada de la imagen USB.
+- Ajustes persistentes, mapa HUB75 de 14 GPIO editable y descarga OTA separada de la imagen USB.
 - MQTT Discovery y entidades para escena, texto, brillo y estado.
 
 ## Siguiente etapa: compatibilidad

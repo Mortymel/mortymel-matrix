@@ -7,7 +7,7 @@ Todas las rutas usan HTTP Basic con usuario `admin` y la contraseña configurada
 | GET | `/` | — | Consola web. |
 | GET | `/api/status` | — | ID, Wi-Fi, MQTT, matriz, escena, brillo y ajustes no secretos. |
 | POST | `/api/display` | JSON `{mode,message,gif,brightness}` | Guarda la escena. |
-| POST | `/api/hardware` | JSON `{e_pin}` | Guarda GPIO E y reinicia. `-1` desactiva el panel. |
+| POST | `/api/hardware` | JSON `{e_pin}` | Guarda el mapa de 14 señales y reinicia; acepta también `{e_pin}` de la API anterior. E `-1` desactiva el panel. |
 | GET | `/api/media` | — | Lista de GIF con nombre y tamaño. |
 | GET | `/api/media/<nombre.gif>` | — | GIF guardado. |
 | POST | `/api/media` | `multipart/form-data`, campo `file` | Carga un GIF. |
@@ -18,7 +18,7 @@ Todas las rutas usan HTTP Basic con usuario `admin` y la contraseña configurada
 | POST | `/api/admin` | JSON `{password}` | Cambia la contraseña web, de 12 a 80 caracteres. |
 | POST | `/api/update` | `multipart/form-data`, campo `file` `.bin` | Instala la **aplicación OTA**, nunca la imagen USB completa. |
 
-Las respuestas JSON usan `application/json`; los errores tienen la forma `{"error":"..."}`. `GET /api/status` incluye `e_pin` y `matrix` (si el controlador inició); ese valor no verifica visualmente el panel.
+Las respuestas JSON usan `application/json`; los errores tienen la forma `{"error":"..."}`. `GET /api/status` incluye `pins` (14 GPIO), `e_pin` por compatibilidad y `matrix` (si el controlador inició); ese valor no verifica visualmente el panel.
 
 ## Escenas y GIF
 
@@ -34,4 +34,6 @@ curl --user admin http://IP_DEL_ESP32/api/status
 
 ## Perfil HUB75
 
-`POST /api/hardware` acepta un entero `e_pin` entre 0 y 48, excepto 26 a 32, o `-1` para desactivar. Comprueba además que ese GPIO no esté asignado a ninguna otra señal en tu montaje. Las demás señales del panel siguen el mapa predeterminado de la biblioteca HUB75, por lo que este endpoint **no constituye un perfil universal** de placas.
+`POST /api/hardware` acepta `{ "pins": { "r1":4,"g1":5,"b1":6,"r2":7,"g2":15,"b2":16,"a":18,"b":8,"c":3,"d":42,"e":-1,"lat":40,"oe":2,"clk":41 } }`. Deben figurar las 14 claves, cada GPIO debe ser entero, sin repetirse y estar permitido por este firmware. `e=-1` mantiene apagada la matriz. Por compatibilidad también acepta `{ "e_pin": 10 }`, que cambia solo E. Guarda en NVS y reinicia. El mapa inicial, la alimentación y el orden físico se explican en [Cableado HUB75](CABLEADO.md).
+
+Esta validación reserva GPIO 0, 19–20, 22–37 y 43–46. Comprueba también qué pines existen y están libres en *tu* placa; la API no descubre las conexiones reales ni el tipo de panel.

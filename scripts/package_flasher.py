@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the public ESP Web Tools site from one reproducible firmware build."""
+"""Build ESP Web Tools manifests from the three ESP32-S3 QD profiles."""
 import hashlib
 import html
 import json
@@ -13,11 +13,14 @@ from pathlib import Path
 import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILD = ROOT / ".pio/build/esp32-s3"
+PROFILES = {"4": ("s3-4mb", "mortymel-matrix-s3-4mb"),
+            "8": ("esp32-s3", "mortymel-matrix-s3-n8"),
+            "16": ("s3-16mb", "mortymel-matrix-s3-16mb")}
 SITE = ROOT / "dist"
 VERSION = (ROOT / "VERSION").read_text().strip()
 GUIDES = {
     "INSTALACION": ("Instalación y recuperación", "Primer arranque, Wi-Fi, panel y actualizaciones."),
+    "CABLEADO": ("Conexión física HUB75", "Señales, GPIO, alimentación y comprobaciones antes de encender."),
     "MQTT": ("Home Assistant y MQTT", "Discovery, estados, comandos y automatizaciones."),
     "API": ("API web", "Rutas para escenas, archivos, ajustes y OTA."),
     "ARQUITECTURA": ("Arquitectura", "Cómo funciona el firmware y cuáles son sus límites."),
@@ -51,27 +54,32 @@ def render_doc(key, body):
 
 def main():
     framework = Path.home() / ".platformio/packages/framework-arduinoespressif32"
-    inputs = [BUILD / "bootloader.bin", BUILD / "partitions.bin",
-              framework / "tools/partitions/boot_app0.bin", BUILD / "firmware.bin"]
-    missing = [str(path) for path in inputs if not path.is_file()]
-    if missing:
-        raise SystemExit("Archivos de compilación ausentes: " + ", ".join(missing))
-    if any(path.read_bytes()[:1] != b"\xe9" for path in (inputs[0], inputs[3])):
-        raise SystemExit("Bootloader o aplicación no parece una imagen ESP32")
-
     firmware = SITE / "firmware"
     firmware.mkdir(parents=True, exist_ok=True)
-    usb = firmware / "mortymel-matrix-s3-n8.bin"
-    ota = firmware / "mortymel-matrix-s3-n8-ota.bin"
-    subprocess.run([
-        sys.executable, "-m", "esptool", "--chip", "esp32s3", "merge_bin",
-        "-o", str(usb), "--flash_mode", "dio", "--flash_freq", "40m", "--flash_size", "8MB",
-        "0x0", str(inputs[0]), "0x8000", str(inputs[1]),
-        "0xe000", str(inputs[2]), "0x10000", str(inputs[3]),
-    ], check=True)
-    if usb.stat().st_size > 8 * 1024 * 1024 or usb.read_bytes()[0] != 0xe9:
-        raise SystemExit("La imagen USB no cabe en 8 MB o carece de cabecera ESP32")
-    shutil.copyfile(inputs[3], ota)
+    artifacts = {}
+    for capacity, (environment, stem) in PROFILES.items():
+        build = ROOT / ".pio/build" / environment
+        inputs = [build / "bootloader.bin", build / "partitions.bin",
+                  framework / "tools/partitions/boot_app0.bin", build / "firmware.bin"]
+        missing = [str(path) for path in inputs if not path.is_file()]
+        if missing:
+            raise SystemExit("Archivos de compilación ausentes: " + ", ".join(missing))
+        if any(path.read_bytes()[:1] != b"\xe9" for path in (inputs[0], inputs[3])):
+            raise SystemExit(f"Bootloader o aplicación inválidos: {environment}")
+        usb = firmware / f"{stem}.bin"
+        ota = firmware / f"{stem}-ota.bin"
+        subprocess.run([
+            sys.executable, "-m", "esptool", "--chip", "esp32s3", "merge_bin",
+            "-o", str(usb), "--flash_mode", "dio", "--flash_freq", "40m",
+            "--flash_size", f"{capacity}MB", "0x0", str(inputs[0]),
+            "0x8000", str(inputs[1]), "0xe000", str(inputs[2]),
+            "0x10000", str(inputs[3]),
+        ], check=True)
+        if usb.stat().st_size > int(capacity) * 1024 * 1024 or usb.read_bytes()[0] != 0xe9:
+            raise SystemExit(f"La imagen USB no cabe en {capacity} MB o no tiene cabecera")
+        shutil.copyfile(inputs[3], ota)
+        artifacts[capacity] = {"usb": {"path": f"firmware/{usb.name}", **digest(usb)},
+                               "ota": {"path": f"firmware/{ota.name}", **digest(ota)}}
     for name in ("index.html", "styles.css", "site.js"):
         shutil.copyfile(ROOT / "flasher" / name, SITE / name)
     (SITE / "docs").mkdir(exist_ok=True)
@@ -86,17 +94,21 @@ def main():
         body = re.sub(r'href="([A-Z]+)\.md"', r'href="\1.html"', body)
         (SITE / "docs" / f"{key}.html").write_text(render_doc(key, body), encoding="utf-8")
 
-    manifest = {
-        "name": "Mortymel Matrix · ESP32-S3 N8", "version": VERSION,
-        "new_install_prompt_erase": True, "new_install_improv_wait_time": 0,
-        "builds": [{"chipFamily": "ESP32-S3", "improv": False,
-                    "parts": [{"path": "firmware/mortymel-matrix-s3-n8.bin", "offset": 0}]}],
-    }
-    (SITE / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    for capacity in PROFILES:
+        manifest = {
+            "name": f"Mortymel Matrix · ESP32-S3 QD {capacity} MB", "version": VERSION,
+            "new_install_prompt_erase": True, "new_install_improv_wait_time": 0,
+            "builds": [{"chipFamily": "ESP32-S3", "improv": False,
+                        "parts": [{"path": artifacts[capacity]["usb"]["path"], "offset": 0}]}],
+        }
+        output = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+        (SITE / f"manifest-{capacity}mb.json").write_text(output, encoding="utf-8")
+        if capacity == "8":
+            (SITE / "manifest.json").write_text(output, encoding="utf-8")  # old links
     info = {"version": VERSION, "commit": os.environ.get("GITHUB_SHA", "local")[:12],
-            "usb": digest(usb), "ota": digest(ota)}
+            "profiles": artifacts}
     (SITE / "build.json").write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
-    print(f"Sitio listo: {SITE} · {VERSION} · USB {info['usb']['bytes']} bytes · OTA {info['ota']['bytes']} bytes")
+    print(f"Sitio listo: {SITE} · {VERSION} · perfiles QD: {', '.join(PROFILES)} MB")
 
 
 if __name__ == "__main__":

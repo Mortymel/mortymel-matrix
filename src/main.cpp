@@ -28,7 +28,28 @@ static String ssid, wifiPassword, mqttHost, mqttUser, mqttPassword, timezone;
 static uint16_t mqttPort = 1883;
 static String mode = "clock", message = "HOLA", selectedGif, activeGif;
 static uint8_t brightness = 96;
-static int8_t matrixEPin = MATRIX_E_PIN;
+// Stored as a single NVS blob. Keep the order aligned with the HUB75 library.
+static HUB75_I2S_CFG::i2s_pins panelPins = {
+  R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT,
+  G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT,
+  C_PIN_DEFAULT, D_PIN_DEFAULT, MATRIX_E_PIN, LAT_PIN_DEFAULT,
+  OE_PIN_DEFAULT, CLK_PIN_DEFAULT
+};
+static const char *pinNames[] = {"r1", "g1", "b1", "r2", "g2", "b2", "a", "b", "c", "d", "e", "lat", "oe", "clk"};
+static_assert(sizeof(panelPins) == sizeof(int8_t) * 14, "Unexpected HUB75 pin structure");
+
+static bool validPanelPins(const HUB75_I2S_CFG::i2s_pins &pins) {
+  const int8_t *values = reinterpret_cast<const int8_t *>(&pins);
+  for (int i = 0; i < 14; ++i) {
+    int pin = values[i];
+    if (i == 10 && pin == -1) continue; // E=-1 disables the panel.
+    // Avoid flash/PSRAM pins, native USB, UART0 console and boot-critical GPIO.
+    if (pin < 1 || pin > 48 || (pin >= 22 && pin <= 37) ||
+        pin == 19 || pin == 20 || pin == 43 || pin == 44 || pin == 45 || pin == 46) return false;
+    for (int j = 0; j < i; ++j) if (values[j] == pin) return false;
+  }
+  return true;
+}
 static bool gifOpen = false, uploadError = false, otaError = false;
 static bool apActive = false;
 static String uploadName;
@@ -237,19 +258,35 @@ static void registerRoutes() {
     d["mode"] = mode; d["message"] = message; d["gif"] = selectedGif;
     d["brightness"] = brightness; d["ssid"] = ssid; d["timezone"] = timezone;
     d["mqtt_host"] = mqttHost; d["mqtt_port"] = mqttPort; d["mqtt_user"] = mqttUser;
-    d["e_pin"] = matrixEPin;
+    d["e_pin"] = panelPins.e;
+    const int8_t *values = reinterpret_cast<const int8_t *>(&panelPins);
+    for (int i = 0; i < 14; ++i) d["pins"][pinNames[i]] = values[i];
     jsonReply(200, d);
   });
   web.on("/api/hardware", HTTP_POST, [] {
     if (!authed()) return;
     JsonDocument d; if (!bodyJson(d)) return;
-    if (!d["e_pin"].is<int>()) { errorReply(400, "GPIO E inválido"); return; }
-    int pin = d["e_pin"].as<int>();
-    if (pin != -1 && (pin < 0 || pin > 48 || (pin >= 26 && pin <= 32))) {
-      errorReply(400, "GPIO E fuera de rango o reservado para flash/PSRAM"); return;
-    }
-    matrixEPin = pin;
-    prefs.putChar("e_pin", matrixEPin);
+    HUB75_I2S_CFG::i2s_pins next = panelPins;
+    int8_t *values = reinterpret_cast<int8_t *>(&next);
+    if (d["pins"].is<JsonObject>()) {
+      JsonObject map = d["pins"].as<JsonObject>();
+      if (map.size() != 14) { errorReply(400, "Se necesitan las 14 señales HUB75"); return; }
+      for (int i = 0; i < 14; ++i) {
+        if (!map[pinNames[i]].is<int>()) { errorReply(400, "GPIO HUB75 inválido"); return; }
+        int pin = map[pinNames[i]].as<int>();
+        if (pin < -1 || pin > 48) { errorReply(400, "GPIO HUB75 fuera de rango"); return; }
+        values[i] = pin;
+      }
+    } else if (d["e_pin"].is<int>()) {
+      // Legacy API remains available to existing installations.
+      int pin = d["e_pin"].as<int>();
+      if (pin < -1 || pin > 48) { errorReply(400, "GPIO E inválido"); return; }
+      next.e = pin;
+    } else { errorReply(400, "Perfil HUB75 inválido"); return; }
+    if (!validPanelPins(next)) { errorReply(400, "GPIO reservado, repetido o no disponible en ESP32-S3"); return; }
+    panelPins = next;
+    prefs.putBytes("pins", &panelPins, sizeof(panelPins));
+    prefs.putChar("e_pin", panelPins.e);
     JsonDocument ok; ok["ok"] = true; ok["restart"] = true; jsonReply(200, ok);
     delay(150); ESP.restart();
   });
@@ -412,7 +449,13 @@ void setup() {
   mode = prefs.getString("mode", "clock"); message = prefs.getString("message", "HOLA");
   selectedGif = prefs.getString("gif", ""); brightness = prefs.getUChar("brightness", 96);
   timezone = prefs.getString("tz", "UTC0");
-  matrixEPin = prefs.getChar("e_pin", MATRIX_E_PIN);
+  panelPins.e = prefs.getChar("e_pin", MATRIX_E_PIN);
+  if (prefs.getBytesLength("pins") == sizeof(panelPins)) {
+    HUB75_I2S_CFG::i2s_pins saved;
+    prefs.getBytes("pins", &saved, sizeof(saved));
+    if (validPanelPins(saved)) panelPins = saved;
+    else { Serial.println("Perfil HUB75 guardado inválido; matriz desactivada"); panelPins.e = -1; }
+  }
   // Only a new device with no prior credentials may format an empty FS.
   // Upgrades from older releases have credentials and preserve their GIFs.
   bool fsReady = LittleFS.begin(freshInstall);
@@ -435,13 +478,12 @@ void setup() {
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", timezone.c_str(), 1); tzset();
   mqtt.setCallback(onMqtt); mqtt.setBufferSize(1024);
-  if (matrixEPin >= 0) {
-    HUB75_I2S_CFG cfg(64, 64, 1);
-    cfg.gpio.e = matrixEPin;
+  if (panelPins.e >= 0 && validPanelPins(panelPins)) {
+    HUB75_I2S_CFG cfg(64, 64, 1, panelPins);
     matrix = new MatrixPanel_I2S_DMA(cfg);
     if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
     else { matrix->setBrightness8(brightness); decoder.begin(GIF_PALETTE_RGB565_LE); }
-  } else Serial.println("Panel desactivado: configura GPIO E desde Sistema.");
+  } else Serial.println("Panel desactivado: configura el mapa HUB75 desde Sistema.");
   registerRoutes(); web.begin();
 }
 

@@ -24,7 +24,7 @@ jobs:
           python scripts/embed_web.py
           git diff --exit-code -- include/web_ui.h
       - name: Compilar firmware
-        run: pio run -e esp32-s3
+        run: pio run -e s3-4mb -e esp32-s3 -e s3-16mb
       - name: Preparar imagen USB y sitio
         run: |
           python scripts/package_flasher.py

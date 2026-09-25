@@ -7,19 +7,20 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 site = Path(__file__).resolve().parents[1] / "dist"
-manifest = json.loads((site / "manifest.json").read_text(encoding="utf-8"))
 meta = json.loads((site / "build.json").read_text(encoding="utf-8"))
-assert manifest["version"] == meta["version"]
-assert manifest["builds"][0]["chipFamily"] == "ESP32-S3"
-part = manifest["builds"][0]["parts"][0]
-assert part["offset"] == 0
-assert part["path"] == "firmware/mortymel-matrix-s3-n8.bin"
-for key, filename in (("usb", part["path"]), ("ota", "firmware/mortymel-matrix-s3-n8-ota.bin")):
-    data = (site / filename).read_bytes()
-    assert data[0] == 0xe9
-    assert len(data) == meta[key]["bytes"]
-    assert hashlib.sha256(data).hexdigest() == meta[key]["sha256"]
-assert (site / part["path"]).read_bytes()[0x10000] == 0xe9, "ESP32-S3 app must be at 0x10000"
+for capacity, artifacts in meta["profiles"].items():
+    manifest = json.loads((site / f"manifest-{capacity}mb.json").read_text(encoding="utf-8"))
+    assert manifest["version"] == meta["version"]
+    assert manifest["builds"][0]["chipFamily"] == "ESP32-S3"
+    part = manifest["builds"][0]["parts"][0]
+    assert part["offset"] == 0 and part["path"] == artifacts["usb"]["path"]
+    for item in artifacts.values():
+        data = (site / item["path"]).read_bytes()
+        assert data[:1] == b"\xe9"
+        assert len(data) == item["bytes"]
+        assert hashlib.sha256(data).hexdigest() == item["sha256"]
+    assert (site / part["path"]).read_bytes()[0x10000] == 0xe9
+assert json.loads((site / "manifest.json").read_text(encoding="utf-8")) == json.loads((site / "manifest-8mb.json").read_text(encoding="utf-8"))
 
 
 class Links(HTMLParser):
