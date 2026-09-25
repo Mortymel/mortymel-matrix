@@ -36,6 +36,8 @@ def digest(path):
 
 def render_doc(key, body):
     title = GUIDES[key][0] if key in GUIDES else "Documentación"
+    label = "CENTRO DE AYUDA" if key == "INDEX" else f"GUÍA / {key}"
+    back = "" if key == "INDEX" else '<p><a href="./">← Volver a todas las guías</a></p>'
     navigation = "".join(
         f'<a class="{"current" if item == key else ""}" href="{item}.html"'
         f'{" aria-current=\"page\"" if item == key else ""}>{html.escape(info[0])}</a>'
@@ -44,7 +46,7 @@ def render_doc(key, body):
     return f'''<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0b111c"><title>{html.escape(title)} · Mortymel Matrix</title><link rel="stylesheet" href="../styles.css"></head>
 <body><a class="skip" href="#contenido">Saltar al contenido</a><header class="topbar"><div class="shell topbar-inner"><a class="wordmark" href="../"><span class="mark" aria-hidden="true">▦</span> MORTYMEL <span>MATRIX</span></a><nav aria-label="Navegación principal"><a href="../">Instalador</a><a class="active" href="./">Documentación</a><a href="https://github.com/Mortymel/mortymel-matrix">GitHub ↗</a></nav></div></header>
-<main class="shell doc-layout" id="contenido"><aside class="doc-nav" aria-label="Guías"><span>DOCUMENTACIÓN</span><a href="./">Todas las guías</a>{navigation}</aside><article class="doc-content"><p class="eyebrow">GUÍA / {html.escape(key)}</p>{body}<p><a href="./">← Volver a todas las guías</a></p></article></main><footer><div class="shell footer-inner"><span>MORTYMEL MATRIX <span class="foot-dim">/ Código MIT</span></span><a href="../">Instalar ↗</a></div></footer></body></html>'''
+<main class="shell doc-layout" id="contenido"><aside class="doc-nav" aria-label="Guías"><span>DOCUMENTACIÓN</span><a href="./">Todas las guías</a>{navigation}</aside><article class="doc-content"><p class="eyebrow">{html.escape(label)}</p>{body}{back}</article></main><footer><div class="shell footer-inner"><span>MORTYMEL MATRIX <span class="foot-dim">/ Código MIT</span></span><a href="../">Instalar ↗</a></div></footer></body></html>'''
 
 
 def main():

@@ -392,7 +392,8 @@ void setup() {
   Serial0.begin(115200);
   prefs.begin("matrix", false);
   uint64_t id = ESP.getEfuseMac();
-  char suffix[7]; snprintf(suffix, sizeof(suffix), "%06X", uint32_t(id) & 0xFFFFFF);
+  // Preserve the identifier format used by existing MQTT Discovery entries.
+  char suffix[13]; snprintf(suffix, sizeof(suffix), "%06X", uint32_t(id));
   deviceId = "matrix_" + String(suffix);
   adminPassword = prefs.getString("admin", "");
   apPassword = prefs.getString("ap_pass", "");
