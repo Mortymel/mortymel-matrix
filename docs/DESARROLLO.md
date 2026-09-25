@@ -26,7 +26,7 @@ python scripts/package_flasher.py
 python scripts/check_site.py
 ```
 
-El resultado está en `dist/`: `index.html`, `docs/`, tres manifests por capacidad, `build.json`, imágenes fusionadas USB y archivos OTA por perfil. `manifest.json` sigue apuntando a 8 MB por compatibilidad. `dist/` es generado y no se versiona. La imagen S3 sitúa el bootloader en `0x0`, particiones en `0x8000`, selector OTA en `0xe000` y aplicación en `0x10000`; `check_site.py` comprueba la cabecera de la aplicación y SHA-256. La imagen USB no se usa para OTA.
+El resultado está en `dist/`: `index.html`, `docs/`, tres manifests por capacidad, `build.json`, imágenes fusionadas USB y archivos OTA por perfil. `manifest.json` sigue apuntando a 8 MB por compatibilidad. `dist/` es generado y no se versiona. La imagen S3 sitúa el bootloader en `0x0`, particiones en `0x8000`, selector OTA en `0xe000` y aplicación en `0x10000`; `check_site.py` comprueba la cabecera de la aplicación y SHA-256. La imagen USB no se usa para OTA. El perfil de 4 MB emplea dos particiones de aplicación de 0x1A0000 y 0xA0000 para LittleFS; el empaquetador rechaza un firmware que exceda cualquiera de las particiones OTA.
 
 GitHub Actions ejecuta la misma compilación y verificación en `push` y `pull_request`. En `main` publica el sitio mediante GitHub Pages. El instalador usa ESP Web Tools, con el manifiesto y los binarios en el mismo origen HTTPS.
 

@@ -13,6 +13,7 @@ from pathlib import Path
 import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
+APP_SLOTS = {"4": 0x1A0000, "8": 0x330000, "16": 0x640000}
 PROFILES = {"4": ("s3-4mb", "mortymel-matrix-s3-4mb"),
             "8": ("esp32-s3", "mortymel-matrix-s3-n8"),
             "16": ("s3-16mb", "mortymel-matrix-s3-16mb")}
@@ -66,6 +67,8 @@ def main():
             raise SystemExit("Archivos de compilación ausentes: " + ", ".join(missing))
         if any(path.read_bytes()[:1] != b"\xe9" for path in (inputs[0], inputs[3])):
             raise SystemExit(f"Bootloader o aplicación inválidos: {environment}")
+        if inputs[3].stat().st_size > APP_SLOTS[capacity]:
+            raise SystemExit(f"La aplicación supera la partición OTA de {capacity} MB")
         usb = firmware / f"{stem}.bin"
         ota = firmware / f"{stem}-ota.bin"
         subprocess.run([
