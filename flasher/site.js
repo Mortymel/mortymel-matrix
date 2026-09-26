@@ -8,6 +8,7 @@ const downloads = document.getElementById('descargas');
 const meta = document.getElementById('build-meta');
 const log = document.getElementById('serial-log');
 const monitorButton = document.getElementById('monitor-toggle');
+const connectionHelp = document.getElementById('connection-help');
 let build, monitorPort, monitorReader, monitorActive = false;
 const status = message => { state.textContent = message; };
 
@@ -53,22 +54,28 @@ async function verifiedImage(item, bootOffset) {
 button.addEventListener('click', async () => {
   if (monitorActive) return status('Cierra primero el registro serie.');
   button.disabled = true;
+  connectionHelp.hidden = true;
+  progress.hidden = true;
   let transport;
+  let phase = 'selección del puerto';
   try {
     if (!build) throw new Error('No se pudo cargar el catálogo de firmware. Recarga la página.');
     const {ESPLoader, Transport} = await import('https://unpkg.com/esptool-js@0.7.0/bundle.js');
     const port = await navigator.serial.requestPort();
+    phase = 'conexión con el chip';
     transport = new Transport(port, true);
     const loader = new ESPLoader({transport, baudrate: 115200, terminal: {
       clean() {}, writeLine() {}, write() {}
     }});
     status('Detectando chip y flash…');
     const chipName = await loader.main();
+    phase = 'detección de flash';
     const flashSize = await loader.detectFlashSize();
     status(`Detectado: ${chipName} · flash ${flashSize || 'no identificada'}.`);
     const profile = selectFirmware(loader.chip.CHIP_NAME, flashSize, build.profiles);
     if (!profile) throw new Error(`No hay una imagen verificada para ${chipName} con flash ${flashSize || 'desconocida'}. No se ha escrito nada.`);
     showFiles(profile);
+    phase = 'descarga y verificación';
     const image = await verifiedImage(profile.usb, profile.bootOffset);
     if (!confirm(`Detectado ${chipName}, flash ${flashSize}. Se instalará Mortymel Matrix. Una instalación nueva borrará TODO lo que haya en la flash: firmware, ajustes y GIF. ¿Continuar?`)) {
       status('Instalación cancelada. No se ha escrito nada.');
@@ -76,6 +83,7 @@ button.addEventListener('click', async () => {
     }
     progress.hidden = false;
     progress.value = 0;
+    phase = 'escritura del firmware';
     status('Instalando firmware… Mantén conectado el cable USB.');
     await loader.writeFlash({
       fileArray: [{data: image, address: 0}], flashMode: 'keep', flashFreq: 'keep',
@@ -83,9 +91,17 @@ button.addEventListener('click', async () => {
       reportProgress(_index, written, total) { progress.value = Math.round(100 * written / total); }
     });
     status('Firmware instalado. Abre Registro serie, selecciona el puerto y pulsa RESET en la placa.');
+    phase = 'reinicio';
     await loader.after('hard_reset');
   } catch (error) {
-    status(error.name === 'NotFoundError' ? 'No se eligió ningún puerto.' : 'Error: ' + error.message);
+    if (error.name === 'NotFoundError') {
+      status('No se eligió ningún puerto.');
+    } else if (phase === 'conexión con el chip') {
+      status(`No se pudo comunicar con la placa (${error.message}). No se ha escrito firmware. Sigue los pasos de conexión y vuelve a intentarlo.`);
+      connectionHelp.hidden = false;
+    } else {
+      status(`Error durante ${phase}: ${error.message}`);
+    }
   } finally {
     if (transport) try { await transport.disconnect(); } catch (_) { /* Port may reset automatically. */ }
     button.disabled = false;
