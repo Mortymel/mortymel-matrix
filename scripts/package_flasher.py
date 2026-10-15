@@ -57,9 +57,9 @@ def render_doc(key, body):
         for item, info in GUIDES.items()
     )
     return f'''<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0b111c"><title>{html.escape(title)} · Mortymel Matrix</title><link rel="stylesheet" href="../styles.css"></head>
-<body><a class="skip" href="#contenido">Saltar al contenido</a><header class="topbar"><div class="shell topbar-inner"><a class="wordmark" href="../"><span class="mark" aria-hidden="true">▦</span> MORTYMEL <span>MATRIX</span></a><nav aria-label="Navegación principal"><a href="../">Instalador</a><a class="active" href="./">Documentación</a><a href="https://github.com/Mortymel/mortymel-matrix">GitHub ↗</a></nav></div></header>
-<main class="shell doc-layout" id="contenido"><aside class="doc-nav" aria-label="Guías"><span>DOCUMENTACIÓN</span><a href="./">Todas las guías</a>{navigation}</aside><article class="doc-content"><p class="eyebrow">{html.escape(label)}</p>{body}{back}</article></main><footer><div class="shell footer-inner"><span>MORTYMEL MATRIX <span class="foot-dim">/ Código MIT</span></span><a href="../">Instalar ↗</a></div></footer></body></html>'''
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f4f3ec"><title>{html.escape(title)} · Morty´s</title><link rel="stylesheet" href="../styles.css"></head>
+<body><a class="skip" href="#contenido">Saltar al contenido</a><header class="topbar"><div class="shell topbar-inner"><a class="wordmark" href="../"><span class="mark" aria-hidden="true">m<span></span></span>Morty´s<span class="wordmark-tag">PIXEL LAB</span></a><nav aria-label="Navegación principal"><a href="../">Instalador</a><a class="active" href="./">Documentación</a><a href="https://github.com/Mortymel/mortymel-matrix">GitHub ↗</a></nav></div></header>
+<main class="shell doc-layout" id="contenido"><aside class="doc-nav" aria-label="Guías"><span>DOCUMENTACIÓN</span><a href="./">Todas las guías</a>{navigation}</aside><article class="doc-content"><p class="eyebrow">{html.escape(label)}</p>{body}{back}</article></main><footer><div class="shell footer-inner"><span>MORTY´S <span class="foot-dim">/ Código MIT</span></span><a href="../">Instalar ↗</a></div></footer></body></html>'''
 
 
 def main():
@@ -99,7 +99,7 @@ def main():
         f'<a href="{key}.html"><strong>{html.escape(title)} →</strong><span>{html.escape(summary)}</span></a>'
         for key, (title, summary) in GUIDES.items()
     )
-    (SITE / "docs/index.html").write_text(render_doc("INDEX", f'<h1>Documentación</h1><p>Guías para instalar, conectar y ampliar Mortymel Matrix.</p><div class="doc-grid">{cards}</div>'), encoding="utf-8")
+    (SITE / "docs/index.html").write_text(render_doc("INDEX", f'<h1>Documentación</h1><p>Guías para instalar, conectar y ampliar Morty´s.</p><div class="doc-grid">{cards}</div>'), encoding="utf-8")
     for key in GUIDES:
         source = (ROOT / "docs" / f"{key}.md").read_text(encoding="utf-8")
         body = markdown.markdown(source, extensions=["extra", "toc"])
@@ -108,7 +108,7 @@ def main():
 
     for key, (_, _, family, capacity, _, _) in PROFILES.items():
         manifest = {
-            "name": f"Mortymel Matrix · {family} {capacity} MB", "version": VERSION,
+            "name": f"Morty´s · {family} {capacity} MB", "version": VERSION,
             "new_install_prompt_erase": True, "new_install_improv_wait_time": 0,
             "builds": [{"chipFamily": family, "improv": False,
                         "parts": [{"path": artifacts[key]["usb"]["path"], "offset": 0}]}],

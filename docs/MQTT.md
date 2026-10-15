@@ -27,7 +27,7 @@ hace en la web del dispositivo.
 Sustituir el ID por el de la instalación:
 
 ```yaml
-alias: Mostrar alerta en Mortymel Matrix
+alias: Mostrar alerta en Morty´s
 triggers:
   - trigger: state
     entity_id: binary_sensor.puerta

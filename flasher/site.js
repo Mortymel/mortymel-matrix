@@ -79,7 +79,7 @@ button.addEventListener('click', async () => {
     showFiles(profile);
     phase = 'descarga y verificación';
     const image = await verifiedImage(profile.usb, profile.bootOffset);
-    if (!confirm(`Seleccionado ${boardSelect.selectedOptions[0].textContent}. Perfil de ${profile.flashMB} MB. Se instalará Mortymel Matrix. Una instalación nueva borrará TODO lo que haya en la flash: firmware, ajustes y GIF. ¿Continuar?`)) {
+    if (!confirm(`Seleccionado ${boardSelect.selectedOptions[0].textContent}. Perfil de ${profile.flashMB} MB. Se instalará Morty´s. Una instalación nueva borrará TODO lo que haya en la flash: firmware, ajustes y GIF. ¿Continuar?`)) {
       status('Instalación cancelada. No se ha escrito nada.');
       return;
     }

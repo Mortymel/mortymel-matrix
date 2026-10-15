@@ -10,7 +10,7 @@ Esta guía corresponde a **una matriz HUB75 64 × 64, barrido 1/32, con direcci�
 
 ## Las 14 señales y el mapa inicial
 
-El mapa siguiente es el **predeterminado de la biblioteca ESP32-HUB75-MatrixPanel-DMA para S3**, excepto E, que Mortymel Matrix deja inicialmente en `-1` para mantener la salida apagada. Es una asignación de señales, **no** un orden físico de las patillas del conector. Conecta cada nombre del lado **IN** del panel al GPIO indicado en tu placa, directamente o mediante el traductor. Confirma en el pinout de tu placa que el GPIO esté realmente expuesto.
+El mapa siguiente es el **predeterminado de la biblioteca ESP32-HUB75-MatrixPanel-DMA para S3**, excepto E, que Morty´s deja inicialmente en `-1` para mantener la salida apagada. Es una asignación de señales, **no** un orden físico de las patillas del conector. Conecta cada nombre del lado **IN** del panel al GPIO indicado en tu placa, directamente o mediante el traductor. Confirma en el pinout de tu placa que el GPIO esté realmente expuesto.
 
 | Señal del panel | GPIO inicial ESP32-S3 | Función |
 | --- | ---: | --- |

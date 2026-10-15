@@ -8,7 +8,7 @@ Una matriz HUB75 64 × 64 necesita fuente externa de 5 V adecuada y tierra comú
 
 ## Primera instalación USB
 
-1. Entra al [instalador Mortymel Matrix](https://mortymel.github.io/mortymel-matrix/) desde Chrome o Edge de escritorio.
+1. Entra al [instalador Morty´s](https://mortymel.github.io/mortymel-matrix/) desde Chrome o Edge de escritorio.
 2. Selecciona el módulo o perfil genérico con la capacidad correcta. Conecta el puerto USB serie disponible en tu placa, pulsa **Instalar placa seleccionada** y elige el puerto que corresponda. Si existe otro programa que usa ese puerto, ciérralo.
 3. La página comprueba la familia del chip sin cambiar el perfil elegido, descarga el binario y comprueba su SHA-256 antes de pedir confirmación. **La instalación nueva borra toda la flash**: firmware previo, ajustes, contraseñas y GIF. Continúa solo si ya tienes copia de lo que necesitas. Espera a que termine el flasheo.
 4. Abre **Registro serie** en el instalador a 115200 baudios y pulsa RESET. Se imprimen el AP y su clave, además del usuario `admin` y su contraseña web inicial. Si no aparecen, prueba el otro puerto USB o abre el monitor de PlatformIO. Las claves se vuelven a imprimir al reiniciar.

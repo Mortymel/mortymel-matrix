@@ -93,7 +93,7 @@ static bool validGifName(const String &s) {
 static String baseTopic() { return "mortymel/" + deviceId; }
 static bool authed() {
   if (web.authenticate("admin", adminPassword.c_str())) return true;
-  web.requestAuthentication(BASIC_AUTH, "Mortymel Matrix");
+  web.requestAuthentication(BASIC_AUTH, "Morty´s");
   return false;
 }
 static void jsonReply(int status, const JsonDocument &doc) {
@@ -130,7 +130,7 @@ static void discovery(const char *kind, const char *key, JsonDocument &d) {
   d["unique_id"] = deviceId + "_" + key;
   d["name"] = key;
   d["device"]["identifiers"][0] = deviceId;
-  d["device"]["name"] = "Mortymel Matrix " + deviceId;
+  d["device"]["name"] = "Morty´s " + deviceId;
   d["availability_topic"] = baseTopic() + "/availability";
   String out; serializeJson(d, out);
   mqtt.publish(("homeassistant/" + String(kind) + "/" + deviceId + "/" + key + "/config").c_str(), out.c_str(), true);
@@ -241,7 +241,7 @@ static void drawClockOrText() {
     if (getLocalTime(&t, 10)) strftime(clockText, sizeof(clockText), "%H:%M", &t);
     matrix->setCursor(17, 26); matrix->print(clockText);
     matrix->setTextColor(matrix->color565(255, 194, 112));
-    matrix->setCursor(5, 47); matrix->print("MORTYMEL");
+    matrix->setCursor(11, 47); matrix->print("MORTY'S");
   } else {
     for (int i = 0; i < 4; ++i) {
       int start = i * 10;

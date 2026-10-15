@@ -1,4 +1,4 @@
-# Mortymel Matrix
+# Morty´s
 
 Firmware abierto para una matriz HUB75 de 64 × 64 controlada por ESP32 clásico, ESP32-S2 o ESP32-S3. Incluye una consola web local para reloj digital, texto y GIF, y control opcional desde Home Assistant mediante MQTT. Su estética recuerda a los relojes de píxeles, pero el código y la interfaz son originales; no incorpora esferas ni recursos de Clockwise.
 
@@ -50,3 +50,5 @@ Esta versión aún no ofrece soporte para todo ESP32 o todos los controladores H
 Código MIT de Mortymel. Bibliotecas de terceros: [HUB75 DMA](https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA), [AnimatedGIF](https://github.com/bitbank2/AnimatedGIF), Adafruit GFX, PubSubClient y ArduinoJson. Clockwise es de [jnthas](https://github.com/jnthas/clockwise); no se reutilizan sus archivos en este repositorio.
 
 Consulta el [catálogo de placas y límites](docs/COMPATIBILIDAD.md) para elegir el perfil manual.
+
+La marca visible es **Morty´s**. Se conservan la URL del repositorio, el AP `Mortymel-XXXXXX` y los temas MQTT existentes para mantener la compatibilidad con instalaciones anteriores.

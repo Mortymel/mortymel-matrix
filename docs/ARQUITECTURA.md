@@ -33,4 +33,4 @@ Esta versión incluye reloj digital, texto y GIF. No incorpora motor de esferas 
 
 ## Licencias
 
-Mortymel Matrix es código original MIT con una estética retro inspirada en relojes de píxeles. Clockwise pertenece a [jnthas](https://github.com/jnthas/clockwise) y no se incluyen sus archivos, fuentes ni personajes. Antes de añadir contenido ajeno, comprobar la licencia específica del recurso.
+Morty´s es código original MIT con una estética retro inspirada en relojes de píxeles. Clockwise pertenece a [jnthas](https://github.com/jnthas/clockwise) y no se incluyen sus archivos, fuentes ni personajes. Antes de añadir contenido ajeno, comprobar la licencia específica del recurso.
