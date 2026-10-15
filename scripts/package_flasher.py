@@ -58,8 +58,8 @@ def render_doc(key, body):
         for item, info in GUIDES.items()
     )
     return f'''<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f4f3ec"><title>{html.escape(title)} · Morty´s</title><link rel="stylesheet" href="../styles.css"></head>
-<body><a class="skip" href="#contenido">Saltar al contenido</a><header class="topbar"><div class="shell topbar-inner"><a class="wordmark" href="../"><span class="mark" aria-hidden="true">m<span></span></span>Morty´s<span class="wordmark-tag">PIXEL LAB</span></a><nav aria-label="Navegación principal"><a href="../">Instalador</a><a class="active" href="./">Documentación</a><a href="https://github.com/Mortymel/mortymel-matrix">GitHub ↗</a></nav></div></header>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f4f3ec"><title>{html.escape(title)} · Morty´s</title><script src="../theme.js"></script><link rel="stylesheet" href="../styles.css"></head>
+<body><a class="skip" href="#contenido">Saltar al contenido</a><header class="topbar"><div class="shell topbar-inner"><a class="wordmark" href="../"><span class="mark" aria-hidden="true">m<span></span></span>Morty´s<span class="wordmark-tag">PIXEL LAB</span></a><nav aria-label="Navegación principal"><a href="../">Instalador</a><a class="active" href="./">Documentación</a><a href="https://github.com/Mortymel/mortymel-matrix">GitHub ↗</a><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Activar tema oscuro" title="Activar tema oscuro"><span data-theme-icon aria-hidden="true">◐</span><span data-theme-label>Oscuro</span></button></nav></div></header>
 <main class="shell doc-layout" id="contenido"><aside class="doc-nav" aria-label="Guías"><span>DOCUMENTACIÓN</span><a href="./">Todas las guías</a>{navigation}</aside><article class="doc-content"><p class="eyebrow">{html.escape(label)}</p>{body}{back}</article></main><footer><div class="shell footer-inner"><span>MORTY´S <span class="foot-dim">/ Código MIT</span></span><a href="../">Instalar ↗</a></div></footer></body></html>'''
 
 
@@ -94,7 +94,7 @@ def main():
         artifacts[key] = {"chipFamily": family, "flashMB": capacity, "bootOffset": boot_offset, "usb": {"path": f"firmware/{usb.name}", **digest(usb)},
                                "ota": {"path": f"firmware/{ota.name}", **digest(ota)}}
     artifacts["wroom-clockwise-4"]["label"] = "WROOM · cableado Clockwise · perfil 4 MB"
-    for name in ("index.html", "styles.css", "site.js", "profile.mjs"):
+    for name in ("index.html", "styles.css", "site.js", "profile.mjs", "theme.js"):
         shutil.copyfile(ROOT / "flasher" / name, SITE / name)
     (SITE / "docs").mkdir(exist_ok=True)
     cards = "".join(
