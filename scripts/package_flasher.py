@@ -48,6 +48,11 @@ def digest(path):
     return {"bytes": path.stat().st_size, "sha256": h.hexdigest()}
 
 
+def asset_name(name):
+    source = ROOT / "flasher" / name
+    return f"{source.stem}.{digest(source)['sha256'][:12]}{source.suffix}"
+
+
 def render_doc(key, body):
     title = GUIDES[key][0] if key in GUIDES else "Documentación"
     label = "CENTRO DE AYUDA" if key == "INDEX" else f"GUÍA / {key}"
@@ -58,7 +63,7 @@ def render_doc(key, body):
         for item, info in GUIDES.items()
     )
     return f'''<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f4f3ec"><title>{html.escape(title)} · Morty´s</title><script src="../theme.js"></script><link rel="stylesheet" href="../styles.css"></head>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f4f3ec"><title>{html.escape(title)} · Morty´s</title><script src="../{asset_name("theme.js")}"></script><link rel="stylesheet" href="../{asset_name("styles.css")}"></head>
 <body><a class="skip" href="#contenido">Saltar al contenido</a><header class="topbar"><div class="shell topbar-inner"><a class="wordmark" href="../"><span class="mark" aria-hidden="true">m<span></span></span>Morty´s<span class="wordmark-tag">PIXEL LAB</span></a><nav aria-label="Navegación principal"><a href="../">Instalador</a><a class="active" href="./">Documentación</a><a href="https://github.com/Mortymel/mortymel-matrix">GitHub ↗</a><button class="theme-toggle" id="theme-toggle" type="button" aria-label="Activar tema oscuro" title="Activar tema oscuro"><span data-theme-icon aria-hidden="true">◐</span><span data-theme-label>Oscuro</span></button></nav></div></header>
 <main class="shell doc-layout" id="contenido"><aside class="doc-nav" aria-label="Guías"><span>DOCUMENTACIÓN</span><a href="./">Todas las guías</a>{navigation}</aside><article class="doc-content"><p class="eyebrow">{html.escape(label)}</p>{body}{back}</article></main><footer><div class="shell footer-inner"><span>MORTY´S <span class="foot-dim">/ Código MIT</span></span><a href="../">Instalar ↗</a></div></footer></body></html>'''
 
@@ -96,6 +101,13 @@ def main():
     artifacts["wroom-clockwise-4"]["label"] = "WROOM · cableado Clockwise · perfil 4 MB"
     for name in ("index.html", "styles.css", "site.js", "profile.mjs", "theme.js"):
         shutil.copyfile(ROOT / "flasher" / name, SITE / name)
+    # Content-addressed theme assets prevent a new button using cached old CSS.
+    for name in ("styles.css", "theme.js"):
+        shutil.copyfile(ROOT / "flasher" / name, SITE / asset_name(name))
+    page = (SITE / "index.html").read_text(encoding="utf-8")
+    for name in ("styles.css", "theme.js"):
+        page = page.replace(f'"./{name}"', f'"./{asset_name(name)}"')
+    (SITE / "index.html").write_text(page, encoding="utf-8")
     (SITE / "docs").mkdir(exist_ok=True)
     cards = "".join(
         f'<a href="{key}.html"><strong>{html.escape(title)} →</strong><span>{html.escape(summary)}</span></a>'

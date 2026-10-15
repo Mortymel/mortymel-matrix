@@ -21,14 +21,19 @@
     }
   }
   apply(current);
-  document.addEventListener('DOMContentLoaded', () => {
+  function bindToggle() {
     apply(current);
     document.getElementById('theme-toggle')?.addEventListener('click', () => {
       explicit = true;
       apply(current === 'dark' ? 'light' : 'dark');
       try { localStorage.setItem(key, current); } catch (_) { /* Theme still works without storage. */ }
     });
-  });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindToggle, {once: true});
+  } else {
+    bindToggle();
+  }
   preference.addEventListener('change', event => {
     if (!explicit) apply(event.matches ? 'dark' : 'light');
   });
