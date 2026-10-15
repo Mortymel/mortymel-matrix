@@ -37,3 +37,15 @@ curl --user admin http://IP_DEL_ESP32/api/status
 `POST /api/hardware` acepta `{ "pins": { "r1":4,"g1":5,"b1":6,"r2":7,"g2":15,"b2":16,"a":18,"b":8,"c":3,"d":42,"e":-1,"lat":40,"oe":2,"clk":41 } }`. Deben figurar las 14 claves, cada GPIO debe ser entero, sin repetirse y estar permitido por este firmware. `e=-1` mantiene apagada la matriz. Por compatibilidad también acepta `{ "e_pin": 10 }`, que cambia solo E. Guarda en NVS y reinicia. El mapa inicial, la alimentación y el orden físico se explican en [Cableado HUB75](CABLEADO.md).
 
 Esta validación reserva GPIO 0, 19–20, 22–37 y 43–46. Comprueba también qué pines existen y están libres en *tu* placa; la API no descubre las conexiones reales ni el tipo de panel.
+
+## Horario de brillo bajo
+
+`POST /api/brightness-schedule` requiere autenticación y recibe `enabled` (booleano), `start` y `end` (HH:MM), y `brightness` (entero 1–255). Ejemplo:
+
+```json
+{"enabled":true,"start":"22:00","end":"07:00","brightness":16}
+```
+
+El intervalo incluye la hora de inicio y excluye la de fin; puede cruzar medianoche. Inicio y fin iguales se rechazan. El horario se guarda en NVS y usa la zona horaria configurada en el dispositivo. Mientras la hora no esté sincronizada no se aplica. El brillo efectivo es el menor entre el habitual y el programado: nunca se aumenta el brillo por activar el horario. Al salir del intervalo se recupera el brillo habitual, incluidos los cambios realizados por MQTT durante el horario.
+
+`GET /api/status` añade `brightness_schedule` (enabled, start, end, brightness, active), `effective_brightness`, `time_synced` y `local_time`. El campo `brightness` continúa representando el brillo habitual.

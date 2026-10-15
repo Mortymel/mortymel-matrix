@@ -68,6 +68,25 @@ def render_doc(key, body):
 <main class="shell doc-layout" id="contenido"><aside class="doc-nav" aria-label="Guías"><span>DOCUMENTACIÓN</span><a href="./">Todas las guías</a>{navigation}</aside><article class="doc-content"><p class="eyebrow">{html.escape(label)}</p>{body}{back}</article></main><footer><div class="shell footer-inner"><span>MORTY´S <span class="foot-dim">/ Código MIT</span></span><a href="../">Instalar ↗</a></div></footer></body></html>'''
 
 
+def render_console_preview():
+    page = (ROOT / "web/index.html").read_text(encoding="utf-8")
+    page = page.replace("<body>", '<body><div style="text-align:center;padding:8px;background:var(--soft);color:var(--muted);font:11px Arial">Demostración · no controla un ESP32</div>', 1)
+    mock = r"""
+const demoState = {wifi:true,matrix:true,mode:'clock',message:'Hola',gif:'',brightness:96,ssid:'',timezone:'AST4',mqtt:false,mqtt_host:'',mqtt_port:1883,mqtt_user:'',device:'matrix_DEMO',chip_family:'ESP32',flash_bytes:4194304,display_profile:'WROOM · cableado Clockwise',clock_phase:false,time_synced:true,local_time:'17:45',brightness_schedule:{enabled:false,start:'22:00',end:'07:00',brightness:16,active:false},pins:{r1:25,g1:26,b1:27,r2:14,g2:12,b2:13,a:23,b:19,c:5,d:17,e:18,lat:4,oe:15,clk:16}};
+window.fetch = async (url, options={}) => {
+  let data={},status=200;
+  if (url==='/api/status') data=demoState;
+  else if (url==='/api/media' && !options.method) data={files:[]};
+  else if (url==='/api/brightness-schedule') {demoState.brightness_schedule={...JSON.parse(options.body),active:false};data={ok:true};}
+  else if (url==='/api/display') {Object.assign(demoState,JSON.parse(options.body));data={ok:true};}
+  else {status=400;data={error:'Esta opción requiere conectarse a tu ESP32.'};}
+  return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+};
+"""
+    before, script = page.rsplit("<script>", 1)
+    return before + "<script>" + mock + script
+
+
 def main():
     framework = Path.home() / ".platformio/packages/framework-arduinoespressif32"
     firmware = SITE / "firmware"
@@ -108,6 +127,7 @@ def main():
     for name in ("styles.css", "theme.js"):
         page = page.replace(f'"./{name}"', f'"./{asset_name(name)}"')
     (SITE / "index.html").write_text(page, encoding="utf-8")
+    (SITE / "console-preview.html").write_text(render_console_preview(), encoding="utf-8")
     (SITE / "docs").mkdir(exist_ok=True)
     cards = "".join(
         f'<a href="{key}.html"><strong>{html.escape(title)} →</strong><span>{html.escape(summary)}</span></a>'

@@ -10,6 +10,7 @@
 #include <AnimatedGIF.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include "web_ui.h"
+#include "brightness_schedule.h"
 
 #ifndef MATRIX_E_PIN
 #define MATRIX_E_PIN -1
@@ -28,6 +29,26 @@ static String ssid, wifiPassword, mqttHost, mqttUser, mqttPassword, timezone;
 static uint16_t mqttPort = 1883;
 static String mode = "clock", message = "HOLA", selectedGif, activeGif;
 static uint8_t brightness = 96;
+static BrightnessSchedule brightnessSchedule;
+static uint8_t appliedBrightness = 0;
+static bool dimmingActive = false;
+static bool localClock(struct tm &local) {
+  time_t now = time(nullptr);
+  return now >= 1577836800 && localtime_r(&now, &local) != nullptr;
+}
+static void applyBrightness() {
+  struct tm local = {};
+  bool valid = localClock(local);
+  uint16_t minute = uint16_t(local.tm_hour * 60 + local.tm_min);
+  dimmingActive = scheduleActive(brightnessSchedule, minute, valid);
+  uint8_t level = scheduledBrightness(brightness, brightnessSchedule, minute, valid);
+  if (matrix && level != appliedBrightness) matrix->setBrightness8(level);
+  appliedBrightness = level;
+}
+static String scheduleTime(uint16_t minute) {
+  char text[6]; snprintf(text, sizeof(text), "%02u:%02u", minute / 60, minute % 60);
+  return String(text);
+}
 // Stored as a single NVS blob. Keep the order aligned with the HUB75 library.
 #if defined(MATRIX_CLOCKWISE_WROOM)
 #if !defined(CONFIG_IDF_TARGET_ESP32)
@@ -128,7 +149,7 @@ static void saveDisplay() {
   prefs.putString("message", message);
   prefs.putString("gif", selectedGif);
   prefs.putUChar("brightness", brightness);
-  if (matrix) matrix->setBrightness8(brightness);
+  applyBrightness();
   lastDraw = 0;
 }
 
@@ -295,6 +316,18 @@ static void registerRoutes() {
     d["flash_bytes"] = ESP.getFlashChipSize(); d["wifi"] = WiFi.status() == WL_CONNECTED;
     d["mqtt"] = mqtt.connected(); d["matrix"] = matrix != nullptr;
     d["mode"] = mode; d["message"] = message; d["gif"] = selectedGif;
+    applyBrightness();
+    struct tm local = {};
+    bool clockValid = localClock(local);
+    d["time_synced"] = clockValid;
+    d["local_time"] = clockValid ? scheduleTime(local.tm_hour * 60 + local.tm_min) : String("--:--");
+    d["effective_brightness"] = appliedBrightness;
+    JsonObject schedule = d["brightness_schedule"].to<JsonObject>();
+    schedule["enabled"] = bool(brightnessSchedule.enabled);
+    schedule["start"] = scheduleTime(brightnessSchedule.start);
+    schedule["end"] = scheduleTime(brightnessSchedule.end);
+    schedule["brightness"] = brightnessSchedule.level;
+    schedule["active"] = dimmingActive;
     d["brightness"] = brightness; d["ssid"] = ssid; d["timezone"] = timezone;
     d["mqtt_host"] = mqttHost; d["mqtt_port"] = mqttPort; d["mqtt_user"] = mqttUser;
     d["e_pin"] = panelPins.e;
@@ -302,6 +335,28 @@ static void registerRoutes() {
     const int8_t *values = reinterpret_cast<const int8_t *>(&panelPins);
     for (int i = 0; i < 14; ++i) d["pins"][pinNames[i]] = values[i];
     jsonReply(200, d);
+  });
+  web.on("/api/brightness-schedule", HTTP_POST, [] {
+    if (!authed()) return;
+    JsonDocument d; if (!bodyJson(d)) return;
+    if (!d["enabled"].is<bool>() || !d["start"].is<const char *>() ||
+        !d["end"].is<const char *>() || !d["brightness"].is<int>()) {
+      errorReply(400, "Completa el horario y el brillo"); return;
+    }
+    BrightnessSchedule next;
+    int level = d["brightness"].as<int>();
+    next.enabled = d["enabled"].as<bool>() ? 1 : 0;
+    if (!parseScheduleTime(d["start"].as<const char *>(), next.start) ||
+        !parseScheduleTime(d["end"].as<const char *>(), next.end) || level < 1 || level > 255) {
+      errorReply(400, "Horario o brillo inválido"); return;
+    }
+    next.level = uint8_t(level);
+    if (!validSchedule(next)) { errorReply(400, "El inicio y el fin deben ser distintos"); return; }
+    if (prefs.putBytes("dim_schedule", &next, sizeof(next)) != sizeof(next)) {
+      errorReply(500, "No se pudo guardar el horario"); return;
+    }
+    brightnessSchedule = next; applyBrightness();
+    JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
   });
   web.on("/api/hardware", HTTP_POST, [] {
     if (!authed()) return;
@@ -492,6 +547,11 @@ void setup() {
   mode = prefs.getString("mode", "clock"); message = prefs.getString("message", "HOLA");
   selectedGif = prefs.getString("gif", ""); brightness = prefs.getUChar("brightness", 96);
   timezone = prefs.getString("tz", "UTC0");
+  if (prefs.getBytesLength("dim_schedule") == sizeof(BrightnessSchedule)) {
+    BrightnessSchedule saved;
+    prefs.getBytes("dim_schedule", &saved, sizeof(saved));
+    if (validSchedule(saved)) brightnessSchedule = saved;
+  }
   panelPins.e = prefs.getChar("e_pin", MATRIX_E_PIN);
   if (prefs.getBytesLength("pins") == sizeof(panelPins)) {
     HUB75_I2S_CFG::i2s_pins saved;
@@ -526,13 +586,18 @@ void setup() {
     cfg.clkphase = displayClockPhase;
     matrix = new MatrixPanel_I2S_DMA(cfg);
     if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
-    else { matrix->setBrightness8(brightness); decoder.begin(GIF_PALETTE_RGB565_LE); }
+    else { appliedBrightness = 0; applyBrightness(); decoder.begin(GIF_PALETTE_RGB565_LE); }
   } else Serial.println("Panel desactivado: configura el mapa HUB75 desde Sistema.");
   registerRoutes(); web.begin();
 }
 
 void loop() {
-  web.handleClient(); maintainMqtt(); maintainDisplay();
+  web.handleClient(); maintainMqtt();
+  static unsigned long lastBrightnessCheck = 0;
+  if (millis() - lastBrightnessCheck >= 1000) {
+    lastBrightnessCheck = millis(); applyBrightness();
+  }
+  maintainDisplay();
   if (apActive && WiFi.status() == WL_CONNECTED) {
     WiFi.softAPdisconnect(true); apActive = false;
   }

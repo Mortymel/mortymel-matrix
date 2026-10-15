@@ -25,6 +25,10 @@ jobs:
           git diff --exit-code -- include/web_ui.h
       - name: Verificar selección manual
         run: node --test tests/*.test.mjs
+      - name: Verificar horario de brillo
+        run: |
+          g++ -std=c++11 -Wall -Wextra -Werror -Iinclude tests/brightness_schedule_test.cpp -o /tmp/brightness_schedule_test
+          /tmp/brightness_schedule_test
       - name: Compilar firmware
         run: pio run -e s3-4mb -e esp32-s3 -e s3-16mb -e esp32-classic -e esp32-s2 -e esp32-8mb -e esp32-16mb -e s2-8mb -e s2-16mb -e wroom-clockwise
       - name: Preparar imagen USB y sitio
