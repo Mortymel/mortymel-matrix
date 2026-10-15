@@ -46,7 +46,7 @@ El panel también tiene un **conector de potencia independiente** para 5 V y GND
 
 ## Otros chips: mapas iniciales de la biblioteca
 
-El instalador reconoce ESP32 clásico y ESP32-S2. La distribución de pines de la **placa física** sigue siendo diferente en cada modelo: consulta siempre su esquema. Las siguientes son asignaciones iniciales de la biblioteca, **no instrucciones para conectarlas sin comprobarlas**. E empieza en `-1` en todos los perfiles.
+El instalador reconoce ESP32 clásico y ESP32-S2. La distribución de pines de la **placa física** sigue siendo diferente en cada modelo: consulta siempre su esquema. Las siguientes son asignaciones iniciales de la biblioteca, **no instrucciones para conectarlas sin comprobarlas**. E empieza en `-1` en los perfiles genéricos; el perfil WROOM Clockwise usa E = 18.
 
 | Señal | ESP32 clásico | ESP32-S2 |
 | --- | ---: | ---: |
@@ -83,3 +83,25 @@ Si la matriz queda oscura, vuelve a `E = -1` desde la web y revisa, con la alime
 - [Mapa S3 de la biblioteca HUB75 DMA](https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA/blob/cf09801a362c71fc61da99751972b6dfb6e63b63/src/platforms/esp32s3/esp32s3-default-pins.hpp) y [disposición de las señales en su ejemplo](https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA/blob/cf09801a362c71fc61da99751972b6dfb6e63b63/examples/PIO_TestPatterns/src/main.cpp).
 - [Esquema y GPIO de ESP32-S3 DevKitC-1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide.html) como ejemplo de **una** placa; consulta el esquema de la tuya.
 - [Alimentación de matrices RGB](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix/powering) y [adaptación de niveles HUB75](https://learn.adafruit.com/adafruit-rgb-matrix-plus-real-time-clock-hat-for-raspberry-pi/downloads) como referencias de técnica general; el consumo real depende de tu panel.
+
+## Perfil WROOM · cableado Clockwise
+
+El instalador incluye un firmware específico para el montaje ESP32-WROOM de la imagen de Clockwise que el usuario probó con Clockwise. El funcionamiento de Morty´s en ese montaje queda pendiente de la prueba física.
+
+Selecciona **WROOM · cableado Clockwise · 4 MB o más (E = 18)**. Usa la distribución de particiones de 4 MB, también válida en módulos con más flash. No es un perfil para S2, S3 ni WROVER con GPIO 16/17 ocupados por PSRAM.
+
+| Señal | GPIO | Señal | GPIO |
+|---|---:|---|---:|
+| R1 | 25 | G1 | 26 |
+| B1 | 27 | R2 | 14 |
+| G2 | 12 | B2 | 13 |
+| A | 23 | B | 19 |
+| C | 5 | D | 17 |
+| E | 18 | LAT | 4 |
+| OE | 15 | CLK | 16 |
+
+Este perfil utiliza **fase de reloj false**, reloj de 8 MHz y controlador SHIFTREG. A diferencia de los perfiles genéricos, **inicia la matriz desde el primer arranque**, con E en 18. Revisa el cableado con todo apagado antes de alimentar el conjunto. La fuente externa y la tierra común siguen siendo necesarias.
+
+Para una primera prueba utiliza la instalación USB del perfil: borra los datos previos y aplica el mapa inicial. Si actualizas una instalación Morty´s por OTA, se conservan sus GPIO y E guardados; revisa el mapa completo en Sistema. La consola muestra el perfil del firmware y su fase de reloj.
+
+Este perfil no incorpora los clockfaces ni el resto del firmware Clockwise. Su referencia es el [mapa y la inicialización de Clockwise](https://github.com/jnthas/clockwise/blob/dadca148061ebc3e2a44d8ea4f8dc6f6d73a2ace/firmware/src/main.cpp).

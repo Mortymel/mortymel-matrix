@@ -1,6 +1,6 @@
 # Placas y perfiles compatibles
 
-El instalador ofrece selección manual por módulo o por familia y capacidad. Hay **nueve perfiles de firmware**: ESP32 clásico, ESP32-S2 y ESP32-S3, cada uno con flash de 4, 8 o 16 MB. Los nombres de módulo son accesos al mismo perfil de familia/memoria; no cambian el cableado ni habilitan PSRAM.
+El instalador ofrece selección manual por módulo o por familia y capacidad. Hay **nueve perfiles genéricos de firmware**: ESP32 clásico, ESP32-S2 y ESP32-S3, cada uno con flash de 4, 8 o 16 MB. Los nombres de módulo genéricos son accesos al mismo perfil de familia/memoria; no cambian el cableado ni habilitan PSRAM. Además hay un décimo firmware: **WROOM · cableado Clockwise**, con mapa propio, E = 18 y fase de reloj false. Consulta su [guía de cableado](CABLEADO.md).
 
 | Familia | Módulos y placas incluidos en el selector |
 |---|---|

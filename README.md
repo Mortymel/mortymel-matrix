@@ -16,7 +16,7 @@ Firmware abierto para una matriz HUB75 de 64 × 64 controlada por ESP32 clásico
 | Home Assistant | MQTT Discovery para escena, mensaje, brillo y estado. Requiere un broker. |
 | Validación física | Pendiente con la placa y el panel concretos. |
 
-El usuario elige la familia y la capacidad de flash antes de instalar. La conexión USB comprueba la familia del chip para evitar escribir un firmware incompatible; no selecciona ni cambia el perfil. Las imágenes S3 usan flash QD; OPI y familias como C3 no están verificadas con esta biblioteca. El firmware arranca con la matriz desactivada. Las 14 señales se configuran en la web local y se deben cotejar con el montaje real. Consulta la [guía de conexión física](docs/CABLEADO.md) con la tabla completa de señales, 5 V, tierra y traductor lógico. El instalador no detecta si el panel conectado tiene el barrido ni el controlador esperados.
+El usuario elige la familia y la capacidad de flash antes de instalar. La conexión USB comprueba la familia del chip para evitar escribir un firmware incompatible; no selecciona ni cambia el perfil. Las imágenes S3 usan flash QD; OPI y familias como C3 no están verificadas con esta biblioteca. Los perfiles genéricos arrancan con la matriz desactivada. El perfil **WROOM · cableado Clockwise** arranca con el mapa específico y E = 18; consulta su [cableado](docs/CABLEADO.md). Las 14 señales se configuran en la web local y se deben cotejar con el montaje real. Consulta la [guía de conexión física](docs/CABLEADO.md) con la tabla completa de señales, 5 V, tierra y traductor lógico. El instalador no detecta si el panel conectado tiene el barrido ni el controlador esperados.
 
 ## Primeros pasos
 

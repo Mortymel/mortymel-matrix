@@ -25,7 +25,7 @@ function showFiles(profile) {
   downloads.hidden = false;
   meta.replaceChildren();
   const label = document.createElement('strong');
-  label.textContent = `Versión ${build.version} · ${profile.chipFamily} · ${profile.flashMB} MB`;
+  label.textContent = `Versión ${build.version} · ${profile.label || profile.chipFamily} · ${profile.flashMB} MB`;
   meta.append(label, document.createElement('br'));
   for (const [kind, item] of [['USB', profile.usb], ['OTA', profile.ota]]) {
     const line = document.createElement('span');

@@ -1,5 +1,10 @@
 [
   {
+    "group": "Cableado Clockwise",
+    "label": "WROOM · cableado Clockwise · 4 MB o más (E = 18)",
+    "profile": "wroom-clockwise-4"
+  },
+  {
     "group": "ESP32 clásico",
     "label": "Genérica ESP32 · 4 MB",
     "profile": "esp32-4"

@@ -29,12 +29,26 @@ static uint16_t mqttPort = 1883;
 static String mode = "clock", message = "HOLA", selectedGif, activeGif;
 static uint8_t brightness = 96;
 // Stored as a single NVS blob. Keep the order aligned with the HUB75 library.
+#if defined(MATRIX_CLOCKWISE_WROOM)
+#if !defined(CONFIG_IDF_TARGET_ESP32)
+#error "Clockwise wiring profile requires classic ESP32-WROOM"
+#endif
+static const char *displayProfile = "WROOM · cableado Clockwise";
+static const bool displayClockPhase = false;
+// R1 G1 B1 R2 G2 B2 A B C D E LAT OE CLK, matching the user's diagram.
+static HUB75_I2S_CFG::i2s_pins panelPins = {
+  25, 26, 27, 14, 12, 13, 23, 19, 5, 17, 18, 4, 15, 16
+};
+#else
+static const char *displayProfile = "Genérico";
+static const bool displayClockPhase = true;
 static HUB75_I2S_CFG::i2s_pins panelPins = {
   R1_PIN_DEFAULT, G1_PIN_DEFAULT, B1_PIN_DEFAULT, R2_PIN_DEFAULT,
   G2_PIN_DEFAULT, B2_PIN_DEFAULT, A_PIN_DEFAULT, B_PIN_DEFAULT,
   C_PIN_DEFAULT, D_PIN_DEFAULT, MATRIX_E_PIN, LAT_PIN_DEFAULT,
   OE_PIN_DEFAULT, CLK_PIN_DEFAULT
 };
+#endif
 static const char *pinNames[] = {"r1", "g1", "b1", "r2", "g2", "b2", "a", "b", "c", "d", "e", "lat", "oe", "clk"};
 static_assert(sizeof(panelPins) == sizeof(int8_t) * 14, "Unexpected HUB75 pin structure");
 
@@ -284,6 +298,7 @@ static void registerRoutes() {
     d["brightness"] = brightness; d["ssid"] = ssid; d["timezone"] = timezone;
     d["mqtt_host"] = mqttHost; d["mqtt_port"] = mqttPort; d["mqtt_user"] = mqttUser;
     d["e_pin"] = panelPins.e;
+    d["display_profile"] = displayProfile; d["clock_phase"] = displayClockPhase;
     const int8_t *values = reinterpret_cast<const int8_t *>(&panelPins);
     for (int i = 0; i < 14; ++i) d["pins"][pinNames[i]] = values[i];
     jsonReply(200, d);
@@ -508,6 +523,7 @@ void setup() {
   mqtt.setCallback(onMqtt); mqtt.setBufferSize(1024);
   if (panelPins.e >= 0 && validPanelPins(panelPins)) {
     HUB75_I2S_CFG cfg(64, 64, 1, panelPins);
+    cfg.clkphase = displayClockPhase;
     matrix = new MatrixPanel_I2S_DMA(cfg);
     if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
     else { matrix->setBrightness8(brightness); decoder.begin(GIF_PALETTE_RGB565_LE); }

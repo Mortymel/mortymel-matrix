@@ -15,6 +15,7 @@ import markdown
 ROOT = Path(__file__).resolve().parents[1]
 APP_SLOTS = {"4": 0x1A0000, "8": 0x330000, "16": 0x640000}
 PROFILES = {
+    "wroom-clockwise-4": ("wroom-clockwise", "mortys-wroom-clockwise-4mb", "ESP32", 4, "esp32", 0x1000),
     "s3-4": ("s3-4mb", "mortymel-matrix-s3-4mb", "ESP32-S3", 4, "esp32s3", 0),
     "s3-8": ("esp32-s3", "mortymel-matrix-s3-n8", "ESP32-S3", 8, "esp32s3", 0),
     "s3-16": ("s3-16mb", "mortymel-matrix-s3-16mb", "ESP32-S3", 16, "esp32s3", 0),
@@ -92,6 +93,7 @@ def main():
         shutil.copyfile(inputs[3], ota)
         artifacts[key] = {"chipFamily": family, "flashMB": capacity, "bootOffset": boot_offset, "usb": {"path": f"firmware/{usb.name}", **digest(usb)},
                                "ota": {"path": f"firmware/{ota.name}", **digest(ota)}}
+    artifacts["wroom-clockwise-4"]["label"] = "WROOM · cableado Clockwise · perfil 4 MB"
     for name in ("index.html", "styles.css", "site.js", "profile.mjs"):
         shutil.copyfile(ROOT / "flasher" / name, SITE / name)
     (SITE / "docs").mkdir(exist_ok=True)
@@ -108,7 +110,7 @@ def main():
 
     for key, (_, _, family, capacity, _, _) in PROFILES.items():
         manifest = {
-            "name": f"Morty´s · {family} {capacity} MB", "version": VERSION,
+            "name": artifacts[key].get("label", f"Morty´s · {family} {capacity} MB"), "version": VERSION,
             "new_install_prompt_erase": True, "new_install_improv_wait_time": 0,
             "builds": [{"chipFamily": family, "improv": False,
                         "parts": [{"path": artifacts[key]["usb"]["path"], "offset": 0}]}],
