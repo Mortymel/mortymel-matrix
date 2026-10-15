@@ -29,6 +29,7 @@ PROFILES = {
 SITE = ROOT / "dist"
 VERSION = (ROOT / "VERSION").read_text().strip()
 GUIDES = {
+    "IMAGENES": ("Fotos y GIF", "Preparar imágenes, animaciones y archivos compatibles con el panel."),
     "INSTALACION": ("Instalación y recuperación", "Primer arranque, Wi-Fi, panel y actualizaciones."),
     "COMPATIBILIDAD": ("Placas y perfiles", "Módulos, memorias y límites del firmware HUB75."),
     "CABLEADO": ("Conexión física HUB75", "Señales, GPIO, alimentación y comprobaciones antes de encender."),

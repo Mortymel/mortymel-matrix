@@ -54,3 +54,6 @@ Consulta el [catálogo de placas y límites](docs/COMPATIBILIDAD.md) para elegir
 La marca visible es **Morty´s**. Se conservan la URL del repositorio, el AP `Mortymel-XXXXXX` y los temas MQTT existentes para mantener la compatibilidad con instalaciones anteriores.
 
 La consola local comparte el diseño claro/oscuro del instalador e incorpora **Horario de brillo bajo**: inicio, fin y nivel, guardados en el ESP32. Usa la hora y zona horaria del dispositivo; necesita sincronizar la hora para activarse.
+
+### Fotos y GIF
+La consola permite importar fotos PNG, JPG o WebP, encajarlas o recortarlas y guardarlas como una imagen fija compatible. Consulta [la guía de fotos y GIF](docs/IMAGENES.md).

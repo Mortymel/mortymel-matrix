@@ -302,7 +302,10 @@ static void maintainDisplay() {
   }
   if (gifOpen && int32_t(millis() - nextFrame) >= 0) {
     int delayMs = 50;
-    if (!decoder.playFrame(false, &delayMs)) { decoder.reset(); matrix->fillScreen(0); }
+    if (!decoder.playFrame(false, &delayMs)) {
+      decoder.reset(); matrix->fillScreen(0);
+      decoder.playFrame(false, &delayMs);
+    }
     nextFrame = millis() + constrain(delayMs, 20, 1000);
   }
 }
