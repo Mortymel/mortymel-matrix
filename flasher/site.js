@@ -79,7 +79,7 @@ button.addEventListener('click', async () => {
     showFiles(profile);
     phase = 'descarga y verificación';
     const image = await verifiedImage(profile.usb, profile.bootOffset);
-    if (!confirm(`Seleccionado ${profile.chipFamily}, perfil de ${profile.flashMB} MB. Se instalará Mortymel Matrix. Una instalación nueva borrará TODO lo que haya en la flash: firmware, ajustes y GIF. ¿Continuar?`)) {
+    if (!confirm(`Seleccionado ${boardSelect.selectedOptions[0].textContent}. Perfil de ${profile.flashMB} MB. Se instalará Mortymel Matrix. Una instalación nueva borrará TODO lo que haya en la flash: firmware, ajustes y GIF. ¿Continuar?`)) {
       status('Instalación cancelada. No se ha escrito nada.');
       return;
     }
@@ -154,11 +154,19 @@ fetch('./build.json', {cache: 'no-store'}).then(response => {
   return response.json();
  }).then(data => {
   build = data;
-  for (const [id, profile] of Object.entries(build.profiles)) {
+  const groups = new Map();
+  for (const board of build.boards) {
+    if (!selectFirmware(board.profile, build.profiles)) throw new Error('Perfil de placa no publicado.');
+    if (!groups.has(board.group)) {
+      const group = document.createElement('optgroup');
+      group.label = board.group;
+      groups.set(board.group, group);
+      boardSelect.append(group);
+    }
     const option = document.createElement('option');
-    option.value = id;
-    option.textContent = `${profile.chipFamily} · ${profile.flashMB} MB${profile.chipFamily === 'ESP32-S3' ? ' · flash QD' : ' (mínimo)'}`;
-    boardSelect.append(option);
+    option.value = board.profile;
+    option.textContent = board.label;
+    groups.get(board.group).append(option);
   }
   status('Selecciona tu placa para continuar.');
 }).catch(error => status('Error: ' + error.message));

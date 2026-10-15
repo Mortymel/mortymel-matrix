@@ -9,7 +9,7 @@ Firmware abierto para una matriz HUB75 de 64 × 64 controlada por ESP32 clásico
 | Componente | Estado |
 | --- | --- |
 | Firmware e instalador USB | Compilan y se publican automáticamente. |
-| Placa precompilada | Selección manual de placa y flash: ESP32-S3 con 4/8/16 MB y ESP32 clásico/S2 con al menos 4 MB. |
+| Placa precompilada | Selección manual de placa y flash: ESP32-S3 con 4/8/16 MB y ESP32 clásico/S2 con 4/8/16 MB. |
 | Panel | Una HUB75 64 × 64 de barrido 1/32 compatible, tras verificar alimentación y mapa de GPIO. |
 | Primera configuración | AP temporal, credenciales aleatorias visibles a 115200 por USB nativo o USB-UART, web local con autenticación. |
 | Contenido | Reloj digital, mensaje y GIF de hasta 64 × 64 y 400 KB cada uno. |
@@ -20,7 +20,7 @@ El usuario elige la familia y la capacidad de flash antes de instalar. La conexi
 
 ## Primeros pasos
 
-1. Abre el [instalador HTTPS](https://mortymel.github.io/mortymel-matrix/) en Chrome o Edge de escritorio, conecta la placa por un cable USB de datos y pulsa **Detectar e instalar**. El instalador identifica chip y flash; pide permiso antes de borrar la memoria.
+1. Abre el [instalador HTTPS](https://mortymel.github.io/mortymel-matrix/) en Chrome o Edge de escritorio, conecta la placa por un cable USB de datos y pulsa **Instalar placa seleccionada**. Elige primero el módulo y la capacidad de flash. El instalador comprueba la familia y pide confirmación antes de borrar la memoria.
 2. Abre **Registro serie** en la misma página a 115200 y pulsa RESET para leer el nombre y contraseña del AP, y la contraseña web. Según la placa puede haber USB nativo, USB-UART o ambos.
 3. Conéctate al AP `Mortymel-XXXXXX` y entra en `http://192.168.4.1/` con usuario `admin`. Configura Wi-Fi y cambia la contraseña de administración.
 4. Comprueba los 14 GPIO, la alimentación y el tipo de panel con la [guía de cableado](docs/CABLEADO.md); configura el mapa y después conecta y asigna E en **Sistema**. Sube GIF desde **Biblioteca GIF**; opcionalmente configura MQTT en **Red y MQTT**.
@@ -48,3 +48,5 @@ Para la placa y capacidad seleccionadas, la página muestra **dos archivos disti
 Esta versión aún no ofrece soporte para todo ESP32 o todos los controladores HUB75, sensores, esferas de Clockwise ni subida de GIF dentro de la interfaz de Home Assistant. La vista previa web es aproximada y la reproducción física está pendiente de pruebas con hardware. Los GIF se cargan en la web local sin reflashear.
 
 Código MIT de Mortymel. Bibliotecas de terceros: [HUB75 DMA](https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA), [AnimatedGIF](https://github.com/bitbank2/AnimatedGIF), Adafruit GFX, PubSubClient y ArduinoJson. Clockwise es de [jnthas](https://github.com/jnthas/clockwise); no se reutilizan sus archivos en este repositorio.
+
+Consulta el [catálogo de placas y límites](docs/COMPATIBILIDAD.md) para elegir el perfil manual.

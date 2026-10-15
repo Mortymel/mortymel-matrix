@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build ESP Web Tools manifests from the three ESP32-S3 QD profiles."""
+"""Build manifests and a manual board catalog for ESP32, S2 and S3."""
 import hashlib
 import html
 import json
@@ -20,11 +20,16 @@ PROFILES = {
     "s3-16": ("s3-16mb", "mortymel-matrix-s3-16mb", "ESP32-S3", 16, "esp32s3", 0),
     "esp32-4": ("esp32-classic", "mortymel-matrix-esp32-4mb", "ESP32", 4, "esp32", 0x1000),
     "s2-4": ("esp32-s2", "mortymel-matrix-s2-4mb", "ESP32-S2", 4, "esp32s2", 0x1000),
+    "esp32-8": ("esp32-8mb", "mortymel-matrix-esp32-8mb", "ESP32", 8, "esp32", 0x1000),
+    "esp32-16": ("esp32-16mb", "mortymel-matrix-esp32-16mb", "ESP32", 16, "esp32", 0x1000),
+    "s2-8": ("s2-8mb", "mortymel-matrix-s2-8mb", "ESP32-S2", 8, "esp32s2", 0x1000),
+    "s2-16": ("s2-16mb", "mortymel-matrix-s2-16mb", "ESP32-S2", 16, "esp32s2", 0x1000),
 }
 SITE = ROOT / "dist"
 VERSION = (ROOT / "VERSION").read_text().strip()
 GUIDES = {
     "INSTALACION": ("Instalación y recuperación", "Primer arranque, Wi-Fi, panel y actualizaciones."),
+    "COMPATIBILIDAD": ("Placas y perfiles", "Módulos, memorias y límites del firmware HUB75."),
     "CABLEADO": ("Conexión física HUB75", "Señales, GPIO, alimentación y comprobaciones antes de encender."),
     "MQTT": ("Home Assistant y MQTT", "Discovery, estados, comandos y automatizaciones."),
     "API": ("API web", "Rutas para escenas, archivos, ajustes y OTA."),
@@ -115,7 +120,7 @@ def main():
         if key == "s3-8":
             (SITE / "manifest.json").write_text(output, encoding="utf-8")  # old links
     info = {"version": VERSION, "commit": os.environ.get("GITHUB_SHA", "local")[:12],
-            "profiles": artifacts}
+            "profiles": artifacts, "boards": json.loads((ROOT / "flasher/boards.json").read_text(encoding="utf-8"))}
     (SITE / "build.json").write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
     print(f"Sitio listo: {SITE} · {VERSION} · perfiles: {', '.join(PROFILES)}")
 

@@ -8,6 +8,10 @@ from urllib.parse import unquote, urlsplit
 
 site = Path(__file__).resolve().parents[1] / "dist"
 meta = json.loads((site / "build.json").read_text(encoding="utf-8"))
+assert meta["boards"], "Catálogo de placas vacío"
+for board in meta["boards"]:
+    assert board["profile"] in meta["profiles"], f"Perfil ausente: {board}"
+    assert board["label"] and board["group"]
 for key, artifacts in meta["profiles"].items():
     manifest = json.loads((site / f"manifest-{key}.json").read_text(encoding="utf-8"))
     assert manifest["version"] == meta["version"]

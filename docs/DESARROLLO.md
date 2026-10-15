@@ -16,12 +16,12 @@
 
 ## Compilar y generar el sitio
 
-Los perfiles `s3-4mb`, `esp32-s3` y `s3-16mb` cubren flash QD de 4/8/16 MB; `esp32-classic` y `esp32-s2` usan 4 MB. El instalador usa esptool-js 0.7.0 para conectar por USB; el usuario elige el perfil desde `build.json` y se comprueba la familia del chip sin cambiar la selección; verifica SHA-256 antes de escribir. Antes de dar soporte a otra variante, comprobar flash QD/OPI, PSRAM, particiones, GPIO, controlador y barrido. Consulta [Cableado](CABLEADO.md). Para cambiar la consola embebida, edita `web/index.html` y regenera el encabezado.
+Los perfiles `s3-4mb`, `esp32-s3` y `s3-16mb` cubren flash QD de 4/8/16 MB; `esp32-classic` y `esp32-s2` usan 4 MB, y `esp32-8mb`, `esp32-16mb`, `s2-8mb` y `s2-16mb` añaden 8/16 MB. El instalador usa esptool-js 0.7.0 para conectar por USB; el usuario elige el perfil desde `build.json` y se comprueba la familia del chip sin cambiar la selección; verifica SHA-256 antes de escribir. Antes de dar soporte a otra variante, comprobar flash QD/OPI, PSRAM, particiones, GPIO, controlador y barrido. Consulta [Cableado](CABLEADO.md). Para cambiar la consola embebida, edita `web/index.html` y regenera el encabezado.
 
 ```bash
 python -m pip install platformio esptool==4.8.1 Markdown==3.7
 python scripts/embed_web.py
-pio run -e esp32-s3
+pio run -e s3-4mb -e esp32-s3 -e s3-16mb -e esp32-classic -e esp32-s2 -e esp32-8mb -e esp32-16mb -e s2-8mb -e s2-16mb
 python scripts/package_flasher.py
 python scripts/check_site.py
 ```
@@ -40,3 +40,5 @@ GitHub Actions ejecuta la misma compilación y verificación en `push` y `pull_r
 6. Actualizar con el `.bin` OTA publicado y confirmar reinicio y persistencia de preferencias y GIF.
 
 Una compilación correcta y el despliegue público no sustituyen estas pruebas físicas.
+
+Consulta el [catálogo de placas y límites](COMPATIBILIDAD.md) para elegir el perfil manual.
