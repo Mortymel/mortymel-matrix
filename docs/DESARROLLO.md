@@ -16,7 +16,7 @@
 
 ## Compilar y generar el sitio
 
-Los perfiles `s3-4mb`, `esp32-s3` y `s3-16mb` cubren flash QD de 4/8/16 MB; `esp32-classic` y `esp32-s2` usan 4 MB. El instalador usa esptool-js 0.7.0 para detectar el chip y la capacidad de flash y escoge el binario desde `build.json`; verifica SHA-256 antes de escribir. Antes de dar soporte a otra variante, comprobar flash QD/OPI, PSRAM, particiones, GPIO, controlador y barrido. Consulta [Cableado](CABLEADO.md). Para cambiar la consola embebida, edita `web/index.html` y regenera el encabezado.
+Los perfiles `s3-4mb`, `esp32-s3` y `s3-16mb` cubren flash QD de 4/8/16 MB; `esp32-classic` y `esp32-s2` usan 4 MB. El instalador usa esptool-js 0.7.0 para conectar por USB; el usuario elige el perfil desde `build.json` y se comprueba la familia del chip sin cambiar la selección; verifica SHA-256 antes de escribir. Antes de dar soporte a otra variante, comprobar flash QD/OPI, PSRAM, particiones, GPIO, controlador y barrido. Consulta [Cableado](CABLEADO.md). Para cambiar la consola embebida, edita `web/index.html` y regenera el encabezado.
 
 ```bash
 python -m pip install platformio esptool==4.8.1 Markdown==3.7

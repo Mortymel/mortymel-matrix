@@ -2,7 +2,7 @@
 
 ## Antes de empezar
 
-El instalador **detecta el chip y el tamaño de flash**. Publica ESP32-S3 con flash QD de 4/8/16 MB y ESP32 clásico y S2 con flash de al menos 4 MB (usan la distribución de 4 MB incluso si tienen más capacidad). No pide seleccionar placa. Los C3/C6 y otros chips sin soporte HUB75 DMA se rechazan. Las variantes S3 con flash OPI no están verificadas: la detección del tamaño por sí sola no permite distinguir con certeza el modo físico de la flash. Los GPIO expuestos dependen de la placa concreta. Se necesita un cable USB de datos, Chrome o Edge de escritorio y una conexión a la página por HTTPS. El ESP32 usa Wi-Fi de 2,4 GHz. Para Home Assistant hace falta un broker MQTT accesible desde esa red.
+El instalador permite **elegir manualmente la familia y el tamaño de flash**. Publica ESP32-S3 con flash QD de 4/8/16 MB y ESP32 clásico y S2 con flash de al menos 4 MB (usan la distribución de 4 MB incluso si tienen más capacidad). Debes elegir el perfil que coincida con las especificaciones de tu placa. Los C3/C6 y otros chips sin soporte HUB75 DMA se rechazan. Las variantes S3 con flash OPI no están verificadas: la detección del tamaño por sí sola no permite distinguir con certeza el modo físico de la flash. Los GPIO expuestos dependen de la placa concreta. Se necesita un cable USB de datos, Chrome o Edge de escritorio y una conexión a la página por HTTPS. El ESP32 usa Wi-Fi de 2,4 GHz. Para Home Assistant hace falta un broker MQTT accesible desde esa red.
 
 Una matriz HUB75 64 × 64 necesita fuente externa de 5 V adecuada y tierra común con el ESP32. Consulta la [guía física HUB75](CABLEADO.md) para conectar las 14 señales, identificar IN, elegir GPIO y preparar la alimentación. Este proyecto inicia con la salida de matriz desactivada (`E = -1`). Puedes cambiar **todo el mapa** desde la web antes de cablear el panel.
 
@@ -29,7 +29,7 @@ Configura y comprueba las 14 señales en **Sistema** siguiendo [Conexión físic
 
 ## Actualizar sin borrar configuración
 
-Después de detectar la placa, en la [página del instalador](https://mortymel.github.io/mortymel-matrix/#descargas) descarga **firmware OTA (aplicación solamente)**. En la web local del ESP32 abre **Sistema → Actualización por Wi-Fi**, selecciona ese `.bin` y espera al reinicio. La imagen **USB completa** se escribe desde offset 0 y **no sirve para OTA**. Usa siempre el archivo OTA **de la misma capacidad y distribución de particiones** con la que instalaste el firmware; al cambiar de perfil reinstala por USB y respalda previamente ajustes y GIF. Las preferencias y los GIF se conservan en una actualización OTA normal.
+Después de seleccionar la placa, en la [página del instalador](https://mortymel.github.io/mortymel-matrix/#descargas) descarga **firmware OTA (aplicación solamente)**. En la web local del ESP32 abre **Sistema → Actualización por Wi-Fi**, selecciona ese `.bin` y espera al reinicio. La imagen **USB completa** se escribe desde offset 0 y **no sirve para OTA**. Usa siempre el archivo OTA **de la misma capacidad y distribución de particiones** con la que instalaste el firmware; al cambiar de perfil reinstala por USB y respalda previamente ajustes y GIF. Las preferencias y los GIF se conservan en una actualización OTA normal.
 
 ## Compilar manualmente
 

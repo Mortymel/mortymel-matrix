@@ -4,7 +4,7 @@ Esta guía corresponde a **una matriz HUB75 64 × 64, barrido 1/32, con direcci�
 
 ## Material y alimentación
 
-- ESP32 clásico, S2 o S3 con GPIO accesibles y un firmware compatible detectado por el [instalador](INSTALACION.md); matriz HUB75 con conector de entrada **IN**, cable HUB75/IDC correcto y una fuente **5 V externa** dimensionada para la corriente indicada por el fabricante del panel.
+- ESP32 clásico, S2 o S3 con GPIO accesibles y un firmware compatible seleccionado en el [instalador](INSTALACION.md); matriz HUB75 con conector de entrada **IN**, cable HUB75/IDC correcto y una fuente **5 V externa** dimensionada para la corriente indicada por el fabricante del panel.
 - Conecta la fuente 5 V al **conector de alimentación del panel**, no a un pin de señales ni a un GPIO. Conecta el GND de esa fuente al GND del panel **y** al GND del ESP32: todas las señales necesitan una referencia común. Alimenta el ESP32 mediante su USB o un circuito adecuado para su placa. No alimentes los LEDs desde el pin 5 V del microcontrolador.
 - Recomendado: traductor lógico de 3,3 V a 5 V, como 74AHCT245, en las señales que van del ESP32 al panel. Alimenta el traductor a 5 V, comparte GND, orienta correctamente su dirección y comprueba su capacidad para las 14 señales. No apliques 5 V a un GPIO del ESP32.
 
@@ -69,7 +69,7 @@ En ciertas placas S2, GPIO 26 se reserva para la flash: **remapea LAT desde la w
 
 ## Adaptar el mapa a tu placa
 
-1. Instala el firmware con **la matriz desconectada**. Lee los GPIO disponibles en el esquema o pinout de la placa exacta. La capacidad de flash 4/8/16 MB, detectada automáticamente, no determina qué pines están expuestos.
+1. Instala el firmware con **la matriz desconectada**. Lee los GPIO disponibles en el esquema o pinout de la placa exacta. La capacidad de flash 4/8/16 MB, seleccionada manualmente, no determina qué pines están expuestos.
 2. En la consola web local abre **Sistema → Conexión HUB75**. Ajusta las 14 señales si tu cableado requiere otros GPIO. En S3 se rechazan pines repetidos, GPIO 0, 19–20, 22–37, 43–46 y los GPIO inexistentes; los otros chips usan una validación propia. Algunas placas reservan más pines: compruébalo tú. GPIO 3 figura por compatibilidad con el mapa inicial de la biblioteca; si afecta al arranque, cambia C a otro GPIO libre *antes de conectar el panel*.
 3. Deja E en `-1`, guarda el mapa, deja reiniciar el ESP32 y confirma en **Sistema** que persiste. Después, con todo apagado, conecta las señales según el mapa guardado, las dos tierras y la fuente del panel.
 4. Si todo coincide con tu matriz 1/32, asigna a E el GPIO físico elegido (por ejemplo 10 si está libre), conecta la señal E con la alimentación apagada y guarda el nuevo mapa. Al reiniciar se inicia el controlador DMA. Que la web diga “Matriz lista” solo confirma la inicialización del controlador; comprueba visualmente colores, filas y brillo.

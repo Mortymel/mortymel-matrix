@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectFirmware} from '../flasher/profile.mjs';
-
+import {selectFirmware, compatibleChip} from '../flasher/profile.mjs';
 const profiles = {
   's3-4': {chipFamily:'ESP32-S3',flashMB:4},
   's3-8': {chipFamily:'ESP32-S3',flashMB:8},
@@ -9,15 +8,17 @@ const profiles = {
   'esp32-4': {chipFamily:'ESP32',flashMB:4},
   's2-4': {chipFamily:'ESP32-S2',flashMB:4}
 };
-
-test('detecta la familia y selecciona capacidad de S3 sin intervención', () => {
-  for (const capacity of [4,8,16]) assert.equal(selectFirmware('ESP32-S3', `${capacity}MB`, profiles), profiles[`s3-${capacity}`]);
+test('conserva exactamente cada perfil elegido manualmente', () => {
+  for (const [id, profile] of Object.entries(profiles)) assert.equal(selectFirmware(id, profiles), profile);
 });
-test('usa partición común de 4 MB para ESP32 clásico y S2 con flash mayor', () => {
-  assert.equal(selectFirmware('ESP32','8MB',profiles), profiles['esp32-4']);
-  assert.equal(selectFirmware('ESP32-S2','16MB',profiles), profiles['s2-4']);
+test('no selecciona un perfil por defecto ni acepta claves heredadas', () => {
+  for (const id of ['', undefined, 'ESP32-S3', 'unknown', 'toString', '__proto__']) assert.equal(selectFirmware(id, profiles), null);
 });
-test('se detiene en familias y memorias no publicadas', () => {
-  for (const input of [['ESP32-C3','4MB'],['ESP32-S3','2MB'],['ESP32-S3','32MB'],['ESP32-S3',undefined],['ESP32-C6','8MB']])
-    assert.equal(selectFirmware(...input,profiles),null);
+test('la comprobación USB rechaza otra familia sin cambiar el perfil', () => {
+  for (const profile of Object.values(profiles)) {
+    assert.equal(compatibleChip(profile, profile.chipFamily), true);
+    assert.equal(compatibleChip(profile, 'ESP32-C3'), false);
+  }
+  assert.equal(compatibleChip(profiles['s3-8'], 'ESP32'), false);
+  assert.equal(compatibleChip(null, 'ESP32'), false);
 });

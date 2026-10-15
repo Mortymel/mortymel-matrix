@@ -1,6 +1,7 @@
-import {selectFirmware} from './profile.mjs';
+import {selectFirmware, compatibleChip} from './profile.mjs';
 
-const button = document.getElementById('auto-install');
+const button = document.getElementById('manual-install');
+const boardSelect = document.getElementById('board-profile');
 const state = document.getElementById('install-state');
 const progress = document.getElementById('install-progress');
 const support = document.getElementById('support');
@@ -60,6 +61,9 @@ button.addEventListener('click', async () => {
   let phase = 'selección del puerto';
   try {
     if (!build) throw new Error('No se pudo cargar el catálogo de firmware. Recarga la página.');
+    const profile = selectFirmware(boardSelect.value, build.profiles);
+    if (!profile) throw new Error('Selecciona el tipo de placa y la capacidad de flash.');
+    boardSelect.disabled = true;
     const {ESPLoader, Transport} = await import('https://unpkg.com/esptool-js@0.7.0/bundle.js');
     const port = await navigator.serial.requestPort();
     phase = 'conexión con el chip';
@@ -67,17 +71,15 @@ button.addEventListener('click', async () => {
     const loader = new ESPLoader({transport, baudrate: 115200, terminal: {
       clean() {}, writeLine() {}, write() {}
     }});
-    status('Detectando chip y flash…');
+    status('Conectando con la placa seleccionada…');
     const chipName = await loader.main();
-    phase = 'detección de flash';
-    const flashSize = await loader.detectFlashSize();
-    status(`Detectado: ${chipName} · flash ${flashSize || 'no identificada'}.`);
-    const profile = selectFirmware(loader.chip.CHIP_NAME, flashSize, build.profiles);
-    if (!profile) throw new Error(`No hay una imagen verificada para ${chipName} con flash ${flashSize || 'desconocida'}. No se ha escrito nada.`);
+    if (!compatibleChip(profile, loader.chip.CHIP_NAME)) {
+      throw new Error(`La placa conectada (${chipName}) no coincide con ${profile.chipFamily}. No se ha escrito nada. Revisa tu selección.`);
+    }
     showFiles(profile);
     phase = 'descarga y verificación';
     const image = await verifiedImage(profile.usb, profile.bootOffset);
-    if (!confirm(`Detectado ${chipName}, flash ${flashSize}. Se instalará Mortymel Matrix. Una instalación nueva borrará TODO lo que haya en la flash: firmware, ajustes y GIF. ¿Continuar?`)) {
+    if (!confirm(`Seleccionado ${profile.chipFamily}, perfil de ${profile.flashMB} MB. Se instalará Mortymel Matrix. Una instalación nueva borrará TODO lo que haya en la flash: firmware, ajustes y GIF. ¿Continuar?`)) {
       status('Instalación cancelada. No se ha escrito nada.');
       return;
     }
@@ -104,6 +106,7 @@ button.addEventListener('click', async () => {
     }
   } finally {
     if (transport) try { await transport.disconnect(); } catch (_) { /* Port may reset automatically. */ }
+    boardSelect.disabled = false;
     button.disabled = false;
   }
 });
@@ -141,6 +144,7 @@ monitorButton.addEventListener('click', async () => {
     if (monitorPort) try { await monitorPort.close(); } catch (_) {}
     monitorPort = null;
     monitorButton.textContent = 'Abrir registro a 115200';
+    boardSelect.disabled = false;
     button.disabled = false;
   }
 });
@@ -148,4 +152,19 @@ monitorButton.addEventListener('click', async () => {
 fetch('./build.json', {cache: 'no-store'}).then(response => {
   if (!response.ok) throw new Error('Catálogo no disponible');
   return response.json();
-}).then(data => { build = data; }).catch(error => status('Error: ' + error.message));
+ }).then(data => {
+  build = data;
+  for (const [id, profile] of Object.entries(build.profiles)) {
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = `${profile.chipFamily} · ${profile.flashMB} MB${profile.chipFamily === 'ESP32-S3' ? ' · flash QD' : ' (mínimo)'}`;
+    boardSelect.append(option);
+  }
+  status('Selecciona tu placa para continuar.');
+}).catch(error => status('Error: ' + error.message));
+
+boardSelect.addEventListener('change', () => {
+  const profile = selectFirmware(boardSelect.value, build?.profiles);
+  downloads.hidden = !profile;
+  if (profile) showFiles(profile);
+});

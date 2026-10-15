@@ -344,7 +344,7 @@ static void registerRoutes() {
     if (uploadError || !uploadName.length() || !LittleFS.exists("/.upload")) {
       LittleFS.remove("/.upload"); errorReply(400, "GIF inválido o espacio insuficiente"); return;
     }
-    File f = LittleFS.open("/.upload", "r"); uint8_t h[10]; bool header = f.read(h, 10) == 10;
+    File f = LittleFS.open("/.upload", "r"); uint8_t h[10] = {}; bool header = f.read(h, 10) == 10;
     f.close();
     int w = h[6] | (h[7] << 8), ht = h[8] | (h[9] << 8);
     if (!header || !(memcmp(h, "GIF87a", 6) == 0 || memcmp(h, "GIF89a", 6) == 0) ||
@@ -353,7 +353,6 @@ static void registerRoutes() {
     }
     String path = "/" + uploadName;
     stopGif();
-    if (LittleFS.exists(path)) LittleFS.remove(path);
     if (!LittleFS.rename("/.upload", path)) { errorReply(500, "No se pudo guardar"); return; }
     JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
   }, [] {
@@ -376,7 +375,8 @@ static void registerRoutes() {
     if (!authed()) return; JsonDocument d; if (!bodyJson(d)) return;
     String next = d["ssid"] | ""; String pass = d["password"] | "";
     if (!next.length() || next.length() > 32 || pass.length() > 64) { errorReply(400, "Red inválida"); return; }
-    ssid = next; if (pass.length()) wifiPassword = pass;
+    if (next != ssid || pass.length()) wifiPassword = pass;
+    ssid = next;
     prefs.putString("ssid", ssid); prefs.putString("wifi_pass", wifiPassword);
     JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
     WiFi.disconnect(); WiFi.begin(ssid.c_str(), wifiPassword.c_str());
@@ -456,6 +456,7 @@ void setup() {
 #endif
   prefs.begin("matrix", false);
   const bool freshInstall = !prefs.isKey("admin") && !prefs.isKey("ap_pass");
+  if (freshInstall) prefs.putBool("fs_pending", true);
   uint64_t id = ESP.getEfuseMac();
   // Preserve the identifier format used by existing MQTT Discovery entries.
   char suffix[13]; snprintf(suffix, sizeof(suffix), "%06X", uint32_t(id));
@@ -483,9 +484,9 @@ void setup() {
     if (validPanelPins(saved)) panelPins = saved;
     else { Serial.println("Perfil HUB75 guardado inválido; matriz desactivada"); panelPins.e = -1; }
   }
-  // Only a new device with no prior credentials may format an empty FS.
-  // Upgrades from older releases have credentials and preserve their GIFs.
-  bool fsReady = LittleFS.begin(freshInstall);
+  // Retry interrupted first initialization, preserving existing installations.
+  bool fsReady = LittleFS.begin(prefs.getBool("fs_pending", false));
+  if (fsReady) prefs.remove("fs_pending");
   if (!fsReady) { Serial.println("ERROR LittleFS: no se borraron los GIF"); secondaryLog("ERROR LittleFS: no se borraron los GIF\n"); }
   WiFi.mode(WIFI_AP_STA);
   if (ssid.length()) {

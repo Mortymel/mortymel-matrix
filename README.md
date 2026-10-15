@@ -9,14 +9,14 @@ Firmware abierto para una matriz HUB75 de 64 × 64 controlada por ESP32 clásico
 | Componente | Estado |
 | --- | --- |
 | Firmware e instalador USB | Compilan y se publican automáticamente. |
-| Placa precompilada | Detección automática de chip y flash: ESP32-S3 con 4/8/16 MB y ESP32 clásico/S2 con al menos 4 MB. |
+| Placa precompilada | Selección manual de placa y flash: ESP32-S3 con 4/8/16 MB y ESP32 clásico/S2 con al menos 4 MB. |
 | Panel | Una HUB75 64 × 64 de barrido 1/32 compatible, tras verificar alimentación y mapa de GPIO. |
 | Primera configuración | AP temporal, credenciales aleatorias visibles a 115200 por USB nativo o USB-UART, web local con autenticación. |
 | Contenido | Reloj digital, mensaje y GIF de hasta 64 × 64 y 400 KB cada uno. |
 | Home Assistant | MQTT Discovery para escena, mensaje, brillo y estado. Requiere un broker. |
 | Validación física | Pendiente con la placa y el panel concretos. |
 
-El usuario no elige placa ni capacidad: el instalador identifica la familia y la flash, y se detiene si no hay binario. Las imágenes S3 usan flash QD; OPI y familias como C3 no están verificadas con esta biblioteca. El firmware arranca con la matriz desactivada. Las 14 señales se configuran en la web local y se deben cotejar con el montaje real. Consulta la [guía de conexión física](docs/CABLEADO.md) con la tabla completa de señales, 5 V, tierra y traductor lógico. El instalador no detecta si el panel conectado tiene el barrido ni el controlador esperados.
+El usuario elige la familia y la capacidad de flash antes de instalar. La conexión USB comprueba la familia del chip para evitar escribir un firmware incompatible; no selecciona ni cambia el perfil. Las imágenes S3 usan flash QD; OPI y familias como C3 no están verificadas con esta biblioteca. El firmware arranca con la matriz desactivada. Las 14 señales se configuran en la web local y se deben cotejar con el montaje real. Consulta la [guía de conexión física](docs/CABLEADO.md) con la tabla completa de señales, 5 V, tierra y traductor lógico. El instalador no detecta si el panel conectado tiene el barrido ni el controlador esperados.
 
 ## Primeros pasos
 
@@ -29,7 +29,7 @@ El AP se cierra al conectar a Wi-Fi y vuelve a abrirse si se pierde la conexión
 
 ## Descargas USB y OTA
 
-Para el chip y capacidad detectados, la página muestra **dos archivos distintos**: la imagen fusionada para instalar por USB desde offset 0 y el `.bin` de la aplicación para actualizar en la consola local, sección **Sistema**. No subas la imagen USB por OTA. La página muestra versión, tamaños y SHA-256 de ambos archivos.
+Para la placa y capacidad seleccionadas, la página muestra **dos archivos distintos**: la imagen fusionada para instalar por USB desde offset 0 y el `.bin` de la aplicación para actualizar en la consola local, sección **Sistema**. No subas la imagen USB por OTA. La página muestra versión, tamaños y SHA-256 de ambos archivos.
 
 ## Documentación
 
