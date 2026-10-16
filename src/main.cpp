@@ -267,6 +267,14 @@ static void stopGif() { if (gifOpen) decoder.close(); gifOpen = false; activeGif
 static void drawClockOrText() {
   if (!matrix) return;
   matrix->fillScreen(0);
+  if (mode == "rgb") {
+    for (int x = 0; x < 64; ++x) {
+      const uint16_t color = x < 22 ? matrix->color565(255, 0, 0) :
+                             x < 43 ? matrix->color565(0, 255, 0) : matrix->color565(0, 0, 255);
+      matrix->drawFastVLine(x, 0, 64, color);
+    }
+    return;
+  }
   matrix->setTextWrap(false);
   matrix->setTextColor(matrix->color565(124, 250, 180));
   matrix->setTextSize(1);
@@ -393,7 +401,7 @@ static void registerRoutes() {
     JsonDocument d; if (!bodyJson(d)) return;
     String m = d["mode"] | ""; String g = d["gif"] | ""; String text = d["message"] | "";
     int level = d["brightness"] | 0;
-    if ((m != "clock" && m != "text" && m != "gif") || level < 1 || level > 255 ||
+    if ((m != "clock" && m != "text" && m != "gif" && m != "rgb") || level < 1 || level > 255 ||
         text.length() > 80 || (g.length() && (!validGifName(g) || !LittleFS.exists("/" + g)))) {
       errorReply(400, "Escena inválida"); return;
     }
