@@ -10,6 +10,7 @@
 #include <AnimatedGIF.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include "web_ui.h"
+#include "login_ui.h"
 #include "brightness_schedule.h"
 
 #ifndef MATRIX_E_PIN
@@ -145,9 +146,27 @@ static bool validGifName(const String &s) {
 }
 
 static String baseTopic() { return "mortymel/" + deviceId; }
+static String sessionToken;
+static unsigned long sessionLastSeen = 0;
+static uint8_t loginFailures = 0;
+static unsigned long lastLoginFailure = 0;
+static bool hasSession() {
+  String cookie = web.header("Cookie");
+  if (sessionToken.length() != 32 || millis() - sessionLastSeen > 3600000UL) return false;
+  int start = cookie.indexOf("mortys_session=");
+  if (start < 0 || (start > 0 && cookie[start - 1] != ' ' && cookie[start - 1] != ';')) return false;
+  start += 15;
+  String candidate = cookie.substring(start, start + 32);
+  if (candidate.length() != 32) return false;
+  uint8_t diff = 0;
+  for (int i = 0; i < 32; ++i) diff |= candidate[i] ^ sessionToken[i];
+  if (diff) return false;
+  sessionLastSeen = millis();
+  return true;
+}
 static bool authed() {
-  if (web.authenticate("admin", adminPassword.c_str())) return true;
-  web.requestAuthentication(BASIC_AUTH, "Morty´s");
+  if (hasSession()) return true;
+  web.send(401, "application/json; charset=utf-8", "{\\"error\\":\\"Sesión caducada. Inicia sesión nuevamente.\\"}");
   return false;
 }
 static void jsonReply(int status, const JsonDocument &doc) {
@@ -338,7 +357,40 @@ static void maintainDisplay() {
 }
 
 static void registerRoutes() {
-  web.on("/", HTTP_GET, [] { if (authed()) web.send_P(200, "text/html; charset=utf-8", WEB_UI); });
+  web.on("/", HTTP_GET, [] {
+    if (hasSession()) web.send_P(200, "text/html; charset=utf-8", WEB_UI);
+    else web.sendHeader("Location", "/login", true), web.send(302, "text/plain", "");
+  });
+  web.on("/login", HTTP_GET, [] {
+    if (hasSession()) { web.sendHeader("Location", "/", true); web.send(302, "text/plain", ""); }
+    else web.send_P(200, "text/html; charset=utf-8", LOGIN_UI);
+  });
+  web.on("/api/login", HTTP_POST, [] {
+    if (loginFailures >= 5 && millis() - lastLoginFailure < 30000UL) {
+      web.send(429, "application/json", "{\\"error\\":\\"Demasiados intentos. Espera 30 segundos.\\"}"); return;
+    }
+    JsonDocument d; if (!bodyJson(d)) return;
+    String username = d["username"] | "";
+    String password = d["password"] | "";
+    if (username != "admin" || password != adminPassword) {
+      ++loginFailures; lastLoginFailure = millis();
+      errorReply(401, "Usuario o contraseña incorrectos"); return;
+    }
+    loginFailures = 0;
+    char token[33];
+    snprintf(token, sizeof(token), "%08lx%08lx%08lx%08lx",
+      (unsigned long)esp_random(), (unsigned long)esp_random(),
+      (unsigned long)esp_random(), (unsigned long)esp_random());
+    sessionToken = token; sessionLastSeen = millis();
+    web.sendHeader("Set-Cookie", "mortys_session=" + sessionToken + "; Path=/; HttpOnly; SameSite=Strict");
+    JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
+  });
+  web.on("/api/logout", HTTP_POST, [] {
+    if (!authed()) return;
+    sessionToken = "";
+    web.sendHeader("Set-Cookie", "mortys_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
+    JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
+  });
   web.on("/api/status", HTTP_GET, [] {
     if (!authed()) return;
     JsonDocument d;
@@ -468,7 +520,7 @@ static void registerRoutes() {
     if (!LittleFS.rename("/.upload", path)) { errorReply(500, "No se pudo guardar"); return; }
     JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
   }, [] {
-    if (!web.authenticate("admin", adminPassword.c_str())) return;
+    if (!hasSession()) return;
     HTTPUpload &u = web.upload();
     if (u.status == UPLOAD_FILE_START) {
       uploadError = false; uploadBytes = 0; uploadName = u.filename; stopGif();
@@ -521,7 +573,7 @@ static void registerRoutes() {
     if (!authed()) return; JsonDocument d; if (!bodyJson(d)) return;
     String pass = d["password"] | "";
     if (pass.length() < 12 || pass.length() > 80) { errorReply(400, "La contraseña debe tener 12 a 80 caracteres"); return; }
-    prefs.putString("admin", pass); adminPassword = pass;
+    prefs.putString("admin", pass); adminPassword = pass; sessionToken = "";
     JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
   });
   web.on("/api/update", HTTP_POST, [] {
@@ -530,7 +582,7 @@ static void registerRoutes() {
     JsonDocument ok; ok["ok"] = true; jsonReply(200, ok);
     delay(150); ESP.restart();
   }, [] {
-    if (!web.authenticate("admin", adminPassword.c_str())) return;
+    if (!hasSession()) return;
     HTTPUpload &u = web.upload();
     if (u.status == UPLOAD_FILE_START) {
       otaError = !u.filename.endsWith(".bin") || !Update.begin(UPDATE_SIZE_UNKNOWN);
@@ -632,6 +684,7 @@ void setup() {
     if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
     else { appliedBrightness = 0; applyBrightness(); decoder.begin(GIF_PALETTE_RGB565_LE); }
   } else Serial.println("Panel desactivado: configura el mapa HUB75 desde Sistema.");
+  const char *headerKeys[] = {"Cookie"}; web.collectHeaders(headerKeys, 1);
   registerRoutes(); web.begin();
 }
 
