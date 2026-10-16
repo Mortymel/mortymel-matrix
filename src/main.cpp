@@ -29,6 +29,25 @@ static String ssid, wifiPassword, mqttHost, mqttUser, mqttPassword, timezone;
 static uint16_t mqttPort = 1883;
 static String mode = "clock", message = "HOLA", selectedGif, activeGif;
 static uint8_t brightness = 96;
+// Permutation of the physical R/G/B output pins, applied to both HUB75 halves.
+static const char *rgbOrders[] = {"RGB", "RBG", "GRB", "GBR", "BRG", "BGR"};
+static uint8_t rgbOrder = 0;
+static bool parseRgbOrder(const String &name, uint8_t &index) {
+  for (uint8_t i = 0; i < 6; ++i) if (name == rgbOrders[i]) { index = i; return true; }
+  return false;
+}
+static HUB75_I2S_CFG::i2s_pins orderedPanelPins(HUB75_I2S_CFG::i2s_pins pins) {
+  const int8_t top[3] = {pins.r1, pins.g1, pins.b1};
+  const int8_t bottom[3] = {pins.r2, pins.g2, pins.b2};
+  const char *order = rgbOrders[rgbOrder];
+  int8_t *upper[3] = {&pins.r1, &pins.g1, &pins.b1};
+  int8_t *lower[3] = {&pins.r2, &pins.g2, &pins.b2};
+  for (int i = 0; i < 3; ++i) {
+    int source = order[i] == 'R' ? 0 : order[i] == 'G' ? 1 : 2;
+    *upper[i] = top[source]; *lower[i] = bottom[source];
+  }
+  return pins;
+}
 static BrightnessSchedule brightnessSchedule;
 static uint8_t appliedBrightness = 0;
 static bool dimmingActive = false;
@@ -267,6 +286,14 @@ static void stopGif() { if (gifOpen) decoder.close(); gifOpen = false; activeGif
 static void drawClockOrText() {
   if (!matrix) return;
   matrix->fillScreen(0);
+  if (mode == "rgb") {
+    for (int x = 0; x < 64; ++x) {
+      const uint16_t color = x < 22 ? matrix->color565(255, 0, 0) :
+                             x < 43 ? matrix->color565(0, 255, 0) : matrix->color565(0, 0, 255);
+      matrix->drawFastVLine(x, 0, 64, color);
+    }
+    return;
+  }
   matrix->setTextWrap(false);
   matrix->setTextColor(matrix->color565(124, 250, 180));
   matrix->setTextSize(1);
@@ -319,6 +346,7 @@ static void registerRoutes() {
     d["flash_bytes"] = ESP.getFlashChipSize(); d["wifi"] = WiFi.status() == WL_CONNECTED;
     d["mqtt"] = mqtt.connected(); d["matrix"] = matrix != nullptr;
     d["mode"] = mode; d["message"] = message; d["gif"] = selectedGif;
+    d["rgb_order"] = rgbOrders[rgbOrder];
     applyBrightness();
     struct tm local = {};
     bool clockValid = localClock(local);
@@ -388,12 +416,23 @@ static void registerRoutes() {
     JsonDocument ok; ok["ok"] = true; ok["restart"] = true; jsonReply(200, ok);
     delay(150); ESP.restart();
   });
+  web.on("/api/rgb-order", HTTP_POST, [] {
+    if (!authed()) return;
+    JsonDocument d; if (!bodyJson(d)) return;
+    if (!d["order"].is<const char *>()) { errorReply(400, "Orden RGB inválido"); return; }
+    uint8_t next = 0;
+    if (!parseRgbOrder(d["order"].as<String>(), next)) { errorReply(400, "Orden RGB inválido"); return; }
+    if (next == rgbOrder) { JsonDocument ok; ok["ok"] = true; ok["restart"] = false; jsonReply(200, ok); return; }
+    if (prefs.putUChar("rgb_order", next) != 1) { errorReply(500, "No se pudo guardar el orden RGB"); return; }
+    JsonDocument ok; ok["ok"] = true; ok["restart"] = true; jsonReply(200, ok);
+    delay(200); ESP.restart();
+  });
   web.on("/api/display", HTTP_POST, [] {
     if (!authed()) return;
     JsonDocument d; if (!bodyJson(d)) return;
     String m = d["mode"] | ""; String g = d["gif"] | ""; String text = d["message"] | "";
     int level = d["brightness"] | 0;
-    if ((m != "clock" && m != "text" && m != "gif") || level < 1 || level > 255 ||
+    if ((m != "clock" && m != "text" && m != "gif" && m != "rgb") || level < 1 || level > 255 ||
         text.length() > 80 || (g.length() && (!validGifName(g) || !LittleFS.exists("/" + g)))) {
       errorReply(400, "Escena inválida"); return;
     }
@@ -550,6 +589,8 @@ void setup() {
   mode = prefs.getString("mode", "clock"); message = prefs.getString("message", "HOLA");
   selectedGif = prefs.getString("gif", ""); brightness = prefs.getUChar("brightness", 96);
   timezone = prefs.getString("tz", "UTC0");
+  rgbOrder = prefs.getUChar("rgb_order", 0);
+  if (rgbOrder >= 6) rgbOrder = 0;
   if (prefs.getBytesLength("dim_schedule") == sizeof(BrightnessSchedule)) {
     BrightnessSchedule saved;
     prefs.getBytes("dim_schedule", &saved, sizeof(saved));
@@ -585,7 +626,7 @@ void setup() {
   setenv("TZ", timezone.c_str(), 1); tzset();
   mqtt.setCallback(onMqtt); mqtt.setBufferSize(1024);
   if (panelPins.e >= 0 && validPanelPins(panelPins)) {
-    HUB75_I2S_CFG cfg(64, 64, 1, panelPins);
+    HUB75_I2S_CFG cfg(64, 64, 1, orderedPanelPins(panelPins));
     cfg.clkphase = displayClockPhase;
     matrix = new MatrixPanel_I2S_DMA(cfg);
     if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
