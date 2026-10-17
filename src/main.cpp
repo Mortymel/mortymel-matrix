@@ -336,7 +336,7 @@ static void maintainDisplay() {
   if (!matrix) return;
   if (mode != "gif" || selectedGif.isEmpty() || !LittleFS.exists("/" + selectedGif)) {
     stopGif();
-    if (!lastDraw || millis() - lastDraw >= 1000) { lastDraw = millis(); drawClockOrText(); }
+    if (!lastDraw || (mode != "rgb" && millis() - lastDraw >= 1000)) { lastDraw = millis() ? millis() : 1; drawClockOrText(); }
     return;
   }
   if (!gifOpen || activeGif != selectedGif) {
@@ -349,7 +349,8 @@ static void maintainDisplay() {
   if (gifOpen && int32_t(millis() - nextFrame) >= 0) {
     int delayMs = 50;
     if (!decoder.playFrame(false, &delayMs)) {
-      decoder.reset(); matrix->fillScreen(0);
+      decoder.reset();
+      // Keep the previous frame visible while the animation loops.
       decoder.playFrame(false, &delayMs);
     }
     nextFrame = millis() + constrain(delayMs, 20, 1000);
@@ -680,6 +681,9 @@ void setup() {
   if (panelPins.e >= 0 && validPanelPins(panelPins)) {
     HUB75_I2S_CFG cfg(64, 64, 1, orderedPanelPins(panelPins));
     cfg.clkphase = displayClockPhase;
+    // Prefer a higher DMA refresh target to reduce visible flicker on 64x64 panels.
+    // The library may reduce color depth automatically to meet this target.
+    cfg.min_refresh_rate = 120;
     matrix = new MatrixPanel_I2S_DMA(cfg);
     if (!matrix->begin()) { delete matrix; matrix = nullptr; Serial.println("Panel sin iniciar"); }
     else { appliedBrightness = 0; applyBrightness(); decoder.begin(GIF_PALETTE_RGB565_LE); }
