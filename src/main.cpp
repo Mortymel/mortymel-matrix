@@ -166,7 +166,7 @@ static bool hasSession() {
 }
 static bool authed() {
   if (hasSession()) return true;
-  web.send(401, "application/json; charset=utf-8", "{\\"error\\":\\"Sesión caducada. Inicia sesión nuevamente.\\"}");
+  web.send(401, "application/json; charset=utf-8", "{\"error\":\"Sesión caducada. Inicia sesión nuevamente.\"}");
   return false;
 }
 static void jsonReply(int status, const JsonDocument &doc) {
@@ -368,7 +368,7 @@ static void registerRoutes() {
   });
   web.on("/api/login", HTTP_POST, [] {
     if (loginFailures >= 5 && millis() - lastLoginFailure < 30000UL) {
-      web.send(429, "application/json", "{\\"error\\":\\"Demasiados intentos. Espera 30 segundos.\\"}"); return;
+      web.send(429, "application/json", "{\"error\":\"Demasiados intentos. Espera 30 segundos.\"}"); return;
     }
     JsonDocument d; if (!bodyJson(d)) return;
     String username = d["username"] | "";
